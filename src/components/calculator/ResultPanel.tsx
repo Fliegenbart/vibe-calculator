@@ -182,18 +182,38 @@ export const ResultPanel: React.FC = () => {
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.3, type: 'spring' }}
+                className="space-y-1"
               >
-                <AnimatedNumber
-                  value={displayIcePrice}
-                  duration={800}
-                  className="text-2xl font-bold text-ice-orange"
-                />
+                {/* Base leasing rate */}
+                <p className="text-sm text-vibe-gray-600">
+                  {formatCurrency(iceLeasing.totalMonthlyRates)}
+                </p>
+                {/* Extra costs line */}
+                <AnimatePresence>
+                  {accumulatedExtraCost > 0 && (
+                    <motion.p
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="text-sm text-ice-orange"
+                    >
+                      + {formatCurrency(accumulatedExtraCost)} Extra
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+                {/* Total */}
+                <div className="pt-1 border-t border-ice-orange/30">
+                  <AnimatedNumber
+                    value={displayIcePrice}
+                    duration={800}
+                    className="text-2xl font-bold text-ice-orange"
+                  />
+                </div>
               </motion.div>
               <motion.p
-                className="text-[10px] text-ice-orange mt-1"
+                className="text-[10px] text-vibe-gray-500 mt-1"
                 animate={{ opacity: visibleUsps > 0 ? 1 : 0.5 }}
               >
-                {visibleUsps > 0 ? `+ ${visibleUsps} Extra-Kosten` : 'Nur Leasing-Rate'}
+                {visibleUsps > 0 ? 'Reale Gesamtkosten' : 'Nur Leasing-Rate'}
               </motion.p>
             </div>
           </div>
