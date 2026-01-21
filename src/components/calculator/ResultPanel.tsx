@@ -65,18 +65,13 @@ const AnimatedNumber: React.FC<{
   return <span className={className}>{formatCurrency(displayValue)}</span>;
 };
 
-// USP items with estimated costs (per year)
-const uspItems = [
-  { id: 'insurance', label: 'Versicherung', icon: Shield, costPerYear: 900 },
-  { id: 'tax', label: 'Kfz-Steuer', icon: FileText, costPerYear: 200 },
-  { id: 'maintenance', label: 'Wartung & Service', icon: Wrench, costPerYear: 450 },
-  { id: 'tires', label: 'Reifen & Wechsel', icon: Car, costPerYear: 250 },
-  { id: 'tuv', label: 'TÜV / HU', icon: FileText, costPerYear: 75 },
-  { id: 'wear', label: 'Verschleißreparaturen', icon: Settings, costPerYear: 300 },
-  { id: 'registration', label: 'Zulassung & Anmeldung', icon: ClipboardList, costPerYear: 16 },
-  { id: 'roadside', label: 'Pannenhilfe', icon: LifeBuoy, costPerYear: 100 },
-  { id: 'km', label: '15.000 km inklusive', icon: CircleDollarSign, costPerYear: 0 },
-];
+// USP item type
+interface UspItem {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  totalCost: number;
+}
 
 export const ResultPanel: React.FC = () => {
   const { result, userProfile } = useCalculatorStore();
@@ -89,20 +84,82 @@ export const ResultPanel: React.FC = () => {
     return generateChartData(result).filter((_, i) => i % 6 === 0 || i === 0);
   }, [result]);
 
-  // Calculate extra costs for each USP
-  const extraCosts = useMemo(() => {
+  // Build USP items with REAL calculated costs from the result
+  const uspItems: UspItem[] = useMemo(() => {
     if (!result) return [];
+
     const years = userProfile.holdingPeriodYears;
-    return uspItems.map(usp => ({
-      ...usp,
-      totalCost: usp.costPerYear * years,
-    }));
-  }, [result, userProfile.holdingPeriodYears]);
+    const annualKm = userProfile.annualMileage;
+
+    // Real calculated values from the comparison
+    const { iceLeasing } = result;
+
+    // Estimate breakdowns (since we only have totals)
+    // Reifen: ca. 4ct/km (Reifenverschleiß + Wechsel)
+    const tiresTotal = Math.round(annualKm * years * 0.04);
+    // TÜV: ca. 100€ alle 2 Jahre
+    const tuvTotal = Math.round((years / 2) * 100);
+    // Zulassung: einmalig ~80€
+    const registrationTotal = 80;
+    // Pannenhilfe: ca. 100€/Jahr
+    const roadsideTotal = 100 * years;
+
+    return [
+      {
+        id: 'insurance',
+        label: 'Versicherung',
+        icon: Shield,
+        totalCost: Math.round(iceLeasing.totalInsuranceCost)
+      },
+      {
+        id: 'tax',
+        label: 'Kfz-Steuer',
+        icon: FileText,
+        totalCost: Math.round(iceLeasing.totalTaxCost)
+      },
+      {
+        id: 'maintenance',
+        label: 'Wartung & Verschleiß',
+        icon: Wrench,
+        totalCost: Math.round(iceLeasing.totalMaintenanceCost)
+      },
+      {
+        id: 'tires',
+        label: 'Reifen & Wechsel',
+        icon: Car,
+        totalCost: tiresTotal
+      },
+      {
+        id: 'tuv',
+        label: 'TÜV / HU',
+        icon: Settings,
+        totalCost: tuvTotal
+      },
+      {
+        id: 'registration',
+        label: 'Zulassung',
+        icon: ClipboardList,
+        totalCost: registrationTotal
+      },
+      {
+        id: 'roadside',
+        label: 'Pannenhilfe',
+        icon: LifeBuoy,
+        totalCost: roadsideTotal
+      },
+      {
+        id: 'km',
+        label: `${(annualKm / 1000).toFixed(0)}k km inklusive`,
+        icon: CircleDollarSign,
+        totalCost: 0
+      },
+    ];
+  }, [result, userProfile.holdingPeriodYears, userProfile.annualMileage]);
 
   // Accumulated extra cost based on visible USPs
   const accumulatedExtraCost = useMemo(() => {
-    return extraCosts.slice(0, visibleUsps).reduce((sum, usp) => sum + usp.totalCost, 0);
-  }, [extraCosts, visibleUsps]);
+    return uspItems.slice(0, visibleUsps).reduce((sum, usp) => sum + usp.totalCost, 0);
+  }, [uspItems, visibleUsps]);
 
   // Reset and start animation when result changes
   useEffect(() => {
@@ -251,7 +308,6 @@ export const ResultPanel: React.FC = () => {
               {uspItems.map((usp, index) => {
                 const IconComponent = usp.icon;
                 const isVisible = index < visibleUsps;
-                const totalCost = extraCosts[index]?.totalCost || 0;
 
                 return (
                   <motion.div
@@ -299,7 +355,7 @@ export const ResultPanel: React.FC = () => {
                         </motion.div>
                       )}
                     </div>
-                    {totalCost > 0 && (
+                    {usp.totalCost > 0 && (
                       <motion.span
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{
@@ -308,7 +364,7 @@ export const ResultPanel: React.FC = () => {
                         }}
                         className="text-xs font-semibold text-ice-orange"
                       >
-                        +{formatCurrency(totalCost)}
+                        +{formatCurrency(usp.totalCost)}
                       </motion.span>
                     )}
                   </motion.div>
