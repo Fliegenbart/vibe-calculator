@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Zap, Fuel } from 'lucide-react';
+import { Zap, Fuel, Check, Star, AlertTriangle } from 'lucide-react';
 import { Card, Select, Slider, Toggle, Section } from '@/components/shared';
 import { useCalculatorStore } from '@/hooks/useCalculatorStore';
 import { electricVehicles, iceVehicles } from '@/data/vehicles';
@@ -103,6 +103,40 @@ export const InputPanel: React.FC = () => {
             </div>
           </div>
         </Section>
+
+        {/* VIBE All-Inclusive Info */}
+        <div className="mt-4 p-3 bg-abo-purple/5 border border-abo-purple/20 rounded-xl">
+          <div className="flex items-center gap-2 mb-3">
+            <Star className="w-4 h-4 text-abo-purple fill-current" />
+            <span className="text-xs font-semibold text-abo-purple">VIBE All-Inclusive</span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+            <span className="text-[10px] text-vibe-gray-600 flex items-center gap-1">
+              <Check className="w-2.5 h-2.5 text-abo-purple shrink-0" /> Vollkasko & Haftpflicht
+            </span>
+            <span className="text-[10px] text-vibe-gray-600 flex items-center gap-1">
+              <Check className="w-2.5 h-2.5 text-abo-purple shrink-0" /> Kfz-Steuer
+            </span>
+            <span className="text-[10px] text-vibe-gray-600 flex items-center gap-1">
+              <Check className="w-2.5 h-2.5 text-abo-purple shrink-0" /> Wartung & Service
+            </span>
+            <span className="text-[10px] text-vibe-gray-600 flex items-center gap-1">
+              <Check className="w-2.5 h-2.5 text-abo-purple shrink-0" /> TÜV / HU
+            </span>
+            <span className="text-[10px] text-vibe-gray-600 flex items-center gap-1">
+              <Check className="w-2.5 h-2.5 text-abo-purple shrink-0" /> Reifen & Wechsel
+            </span>
+            <span className="text-[10px] text-vibe-gray-600 flex items-center gap-1">
+              <Check className="w-2.5 h-2.5 text-abo-purple shrink-0" /> 15.000 km/Jahr
+            </span>
+          </div>
+          <div className="mt-3 pt-2 border-t border-abo-purple/10">
+            <div className="flex items-start gap-1.5 text-[10px] text-ice-orange">
+              <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
+              <span>Beim Verbrenner-Leasing: Versicherung, Steuer, Wartung, Reifen extra!</span>
+            </div>
+          </div>
+        </div>
       </Card>
 
       {/* Nutzungsprofil */}
