@@ -105,6 +105,14 @@ export const DEFAULT_USER_PROFILE: UserProfile = {
   wallboxCost: 1500,
   hasSolarPanels: false,
   solarSelfConsumptionRate: 0.3,
+
+  // Erweiterter Modus
+  isCompanyCar: false,
+  taxBracket: 0.35,
+  livesInCity: false,
+  monthlyParkingCost: 100,
+  hasEmployerCharging: false,
+  priceForecast: 'moderate',
 };
 
 // ============================================

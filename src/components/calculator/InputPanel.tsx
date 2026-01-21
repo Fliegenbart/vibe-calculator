@@ -1,37 +1,65 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Zap, Fuel, Check, Star, AlertTriangle } from 'lucide-react';
-import { Card, Select, Slider, Toggle, Section } from '@/components/shared';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Zap, Fuel, Check, Info, Sparkles, ChevronDown, Building2, ParkingCircle, Plug, TrendingUp } from 'lucide-react';
+import { Card, Select, Slider, Toggle } from '@/components/shared';
 import { useCalculatorStore } from '@/hooks/useCalculatorStore';
 import { electricVehicles, iceVehicles } from '@/data/vehicles';
 import { SLIDER_RANGES } from '@/data/defaults';
 import { formatCurrency, formatKm } from '@/utils';
-import { ChargingScenario } from '@/types';
+import { ChargingScenario, PriceForecast } from '@/types';
 
-const chargingPresets: { id: string; label: string; scenario: ChargingScenario }[] = [
+const chargingPresets: { id: string; label: string; description: string; emoji: string; scenario: ChargingScenario }[] = [
   {
     id: 'homeOnly',
-    label: 'Nur Zuhause',
+    label: 'Zuhause',
+    description: '100% Wallbox',
+    emoji: '🏠',
     scenario: { homeCharging: 1.0, workCharging: 0, publicACCharging: 0, publicDCCharging: 0 },
   },
   {
     id: 'homePrimary',
-    label: 'Hauptsächlich Zuhause',
+    label: 'Meist Zuhause',
+    description: '70% Wallbox',
+    emoji: '🏡',
     scenario: { homeCharging: 0.7, workCharging: 0.1, publicACCharging: 0.15, publicDCCharging: 0.05 },
   },
   {
     id: 'mixed',
     label: 'Gemischt',
+    description: '40% Wallbox',
+    emoji: '🔀',
     scenario: { homeCharging: 0.4, workCharging: 0.2, publicACCharging: 0.25, publicDCCharging: 0.15 },
   },
   {
     id: 'publicPrimary',
-    label: 'Viel Unterwegs',
+    label: 'Unterwegs',
+    description: 'Öffentlich',
+    emoji: '🛣️',
     scenario: { homeCharging: 0.1, workCharging: 0.1, publicACCharging: 0.4, publicDCCharging: 0.4 },
   },
 ];
 
+// Section Header Component
+const SectionHeader: React.FC<{ title: string; subtitle?: string; emoji?: string }> = ({ title, subtitle, emoji }) => (
+  <div className="mb-5">
+    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+      {emoji && <span>{emoji}</span>}
+      {title}
+    </h3>
+    {subtitle && <p className="text-sm text-white/50 mt-1">{subtitle}</p>}
+  </div>
+);
+
+// Preisprognose-Optionen
+const priceForecastOptions: { id: PriceForecast; label: string; description: string; emoji: string }[] = [
+  { id: 'conservative', label: 'Konservativ', description: 'Strom +2%, Benzin +3%', emoji: '📊' },
+  { id: 'moderate', label: 'Moderat', description: 'Strom +3%, Benzin +5%', emoji: '📈' },
+  { id: 'aggressive', label: 'Aggressiv', description: 'Strom +4%, Benzin +8%', emoji: '🚀' },
+];
+
 export const InputPanel: React.FC = () => {
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
   const {
     userProfile,
     setEVVehicle,
@@ -45,16 +73,25 @@ export const InputPanel: React.FC = () => {
     setWallboxCost,
     setHasSolarPanels,
     setSolarSelfConsumptionRate,
+    // Erweiterter Modus
+    setIsCompanyCar,
+    setTaxBracket,
+    setLivesInCity,
+    setMonthlyParkingCost,
+    setHasEmployerCharging,
+    setPriceForecast,
   } = useCalculatorStore();
 
   const evOptions = electricVehicles.map((v) => ({
     value: v.id,
-    label: `${v.name} (${v.vibeAbo?.monthlyRate ?? 0} €/Monat)`,
+    label: `${v.name}`,
+    sublabel: `${v.vibeAbo?.monthlyRate ?? 0} €/Monat`,
   }));
 
   const iceOptions = iceVehicles.map((v) => ({
     value: v.id,
-    label: `${v.name} (${v.leasing?.monthlyRate ?? 0} €/Monat)`,
+    label: `${v.name}`,
+    sublabel: `${v.leasing?.monthlyRate ?? 0} €/Monat`,
   }));
 
   const selectedChargingPreset = chargingPresets.find(
@@ -66,86 +103,101 @@ export const InputPanel: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Fahrzeugauswahl */}
-      <Card variant="bordered" padding="md" className="relative overflow-hidden">
-        <div className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-abo-purple/10 to-transparent rounded-full blur-2xl" />
-        <Section title="🚗 Pimp deinen Vergleich">
-          <div className="grid grid-cols-1 gap-4">
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-abo-light rounded-lg">
-                <Zap className="w-5 h-5 text-abo-purple" />
-              </div>
-              <div className="flex-1">
-                <Select
-                  label="E-Auto (VIBE Autoabo)"
-                  value={userProfile.evVehicle?.id || ''}
-                  onChange={(id) => {
-                    const vehicle = electricVehicles.find((v) => v.id === id);
-                    if (vehicle) setEVVehicle(vehicle);
-                  }}
-                  options={evOptions}
-                />
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-orange-50 rounded-lg">
-                <Fuel className="w-5 h-5 text-ice-orange" />
-              </div>
-              <div className="flex-1">
-                <Select
-                  label="Verbrenner (Leasing)"
-                  value={userProfile.iceVehicle?.id || ''}
-                  onChange={(id) => {
-                    const vehicle = iceVehicles.find((v) => v.id === id);
-                    if (vehicle) setICEVehicle(vehicle);
-                  }}
-                  options={iceOptions}
-                />
-              </div>
-            </div>
-          </div>
-        </Section>
+      <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6">
+        <SectionHeader
+          title="Wähl deine Rides"
+          subtitle="E-Auto Abo vs. Verbrenner Leasing"
+          emoji="🚗"
+        />
 
-        {/* VIBE All-Inclusive Info */}
-        <div className="mt-4 p-3 bg-gradient-to-r from-abo-purple/10 via-purple-500/5 to-pink-500/10 border border-abo-purple/20 rounded-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 text-4xl opacity-10 -rotate-12 translate-x-2 -translate-y-1">🎁</div>
-          <div className="flex items-center gap-2 mb-3">
-            <Star className="w-4 h-4 text-abo-purple fill-current" />
-            <span className="text-xs font-bold text-abo-purple">Alles dabei, Zero Stress 💅</span>
-          </div>
-          <div className="grid grid-cols-2 gap-x-2 gap-y-1">
-            <span className="text-[10px] text-vibe-gray-600 flex items-center gap-1">
-              <Check className="w-2.5 h-2.5 text-abo-purple shrink-0" /> Vollkasko & Haftpflicht
-            </span>
-            <span className="text-[10px] text-vibe-gray-600 flex items-center gap-1">
-              <Check className="w-2.5 h-2.5 text-abo-purple shrink-0" /> Kfz-Steuer
-            </span>
-            <span className="text-[10px] text-vibe-gray-600 flex items-center gap-1">
-              <Check className="w-2.5 h-2.5 text-abo-purple shrink-0" /> Wartung & Service
-            </span>
-            <span className="text-[10px] text-vibe-gray-600 flex items-center gap-1">
-              <Check className="w-2.5 h-2.5 text-abo-purple shrink-0" /> TÜV / HU
-            </span>
-            <span className="text-[10px] text-vibe-gray-600 flex items-center gap-1">
-              <Check className="w-2.5 h-2.5 text-abo-purple shrink-0" /> Reifen & Wechsel
-            </span>
-            <span className="text-[10px] text-vibe-gray-600 flex items-center gap-1">
-              <Check className="w-2.5 h-2.5 text-abo-purple shrink-0" /> 15.000 km/Jahr
-            </span>
-          </div>
-          <div className="mt-3 pt-2 border-t border-abo-purple/10">
-            <div className="flex items-start gap-1.5 text-[10px] text-ice-orange font-medium">
-              <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
-              <span>Beim Verbrenner? Alles extra. RIP Geldbeutel 💸</span>
+        <div className="space-y-5">
+          {/* E-Auto */}
+          <motion.div
+            className="p-4 bg-gradient-to-r from-purple-500/20 to-pink-500/10 rounded-2xl border border-purple-500/20"
+            whileHover={{ scale: 1.01 }}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30">
+                <Zap className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="font-bold text-white">E-Auto Abo ⚡</p>
+                <p className="text-xs text-white/50">VIBE All-Inclusive</p>
+              </div>
+              <Sparkles className="w-4 h-4 text-purple-400 ml-auto" />
+            </div>
+            <Select
+              label=""
+              value={userProfile.evVehicle?.id || ''}
+              onChange={(id) => {
+                const vehicle = electricVehicles.find((v) => v.id === id);
+                if (vehicle) setEVVehicle(vehicle);
+              }}
+              options={evOptions}
+            />
+          </motion.div>
+
+          {/* Verbrenner */}
+          <motion.div
+            className="p-4 bg-gradient-to-r from-orange-500/20 to-red-500/10 rounded-2xl border border-orange-500/20"
+            whileHover={{ scale: 1.01 }}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/30">
+                <Fuel className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="font-bold text-white">Verbrenner 🦕</p>
+                <p className="text-xs text-white/50">Klassisches Leasing</p>
+              </div>
+            </div>
+            <Select
+              label=""
+              value={userProfile.iceVehicle?.id || ''}
+              onChange={(id) => {
+                const vehicle = iceVehicles.find((v) => v.id === id);
+                if (vehicle) setICEVehicle(vehicle);
+              }}
+              options={iceOptions}
+            />
+          </motion.div>
+        </div>
+
+        {/* Info Box */}
+        <motion.div
+          className="mt-5 p-4 bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 rounded-2xl border border-emerald-500/20"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-emerald-400 mb-2">Beim E-Auto Abo alles dabei:</p>
+              <div className="grid grid-cols-2 gap-2">
+                {['Versicherung', 'Kfz-Steuer', 'Wartung', 'TÜV', 'Reifen', '15.000 km'].map((item) => (
+                  <span key={item} className="text-xs text-white/60 flex items-center gap-1.5">
+                    <Check className="w-3 h-3 text-emerald-400" />
+                    {item}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </Card>
 
-      {/* Nutzungsprofil */}
-      <Card variant="bordered" padding="md">
-        <Section title="🛣️ Wie rollst du?">
+      {/* Nutzung */}
+      <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6">
+        <SectionHeader
+          title="Wie rollst du?"
+          subtitle="Kilometer & Nutzungsdauer"
+          emoji="📏"
+        />
+
+        <div className="space-y-6">
           <Slider
-            label="Jahreskilometer"
+            label="Jährliche Kilometer"
             value={userProfile.annualMileage}
             onChange={setAnnualMileage}
             min={SLIDER_RANGES.annualMileage.min}
@@ -154,84 +206,92 @@ export const InputPanel: React.FC = () => {
             formatValue={(v) => formatKm(v)}
           />
           <Slider
-            label="Haltedauer"
+            label="Nutzungsdauer"
             value={userProfile.holdingPeriodYears}
             onChange={setHoldingPeriod}
             min={1}
             max={10}
             step={1}
-            formatValue={(v) => `${v} Jahre`}
+            formatValue={(v) => `${v} ${v === 1 ? 'Jahr' : 'Jahre'}`}
           />
-        </Section>
+        </div>
       </Card>
 
-      {/* Ladeszenarien */}
-      <Card variant="bordered" padding="md">
-        <Section title="⚡ Wo tankst du Strom?">
-          <div className="grid grid-cols-2 gap-2">
-            {chargingPresets.map((preset) => (
-              <motion.button
-                key={preset.id}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setChargingScenario(preset.scenario)}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                  selectedChargingPreset === preset.id
-                    ? 'bg-vibe-primary text-vibe-dark'
-                    : 'bg-vibe-gray-100 text-vibe-gray-600 hover:bg-vibe-gray-200'
-                }`}
-              >
+      {/* Laden */}
+      <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6">
+        <SectionHeader
+          title="Wo tankst du Strom?"
+          subtitle="Dein Ladeszenario"
+          emoji="🔌"
+        />
+
+        <div className="grid grid-cols-2 gap-3">
+          {chargingPresets.map((preset) => (
+            <motion.button
+              key={preset.id}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setChargingScenario(preset.scenario)}
+              className={`p-4 rounded-2xl text-left transition-all border-2 ${
+                selectedChargingPreset === preset.id
+                  ? 'bg-gradient-to-br from-purple-500/30 to-pink-500/20 border-purple-500/50'
+                  : 'bg-white/5 border-white/10 hover:border-white/20'
+              }`}
+            >
+              <span className="text-xl mb-2 block">{preset.emoji}</span>
+              <p className={`font-bold text-sm ${
+                selectedChargingPreset === preset.id ? 'text-purple-300' : 'text-white'
+              }`}>
                 {preset.label}
-              </motion.button>
-            ))}
+              </p>
+              <p className="text-xs text-white/50 mt-0.5">{preset.description}</p>
+            </motion.button>
+          ))}
+        </div>
+
+        {/* Charging Bar */}
+        <div className="mt-5 p-4 bg-white/5 rounded-2xl">
+          <p className="text-xs text-white/50 mb-3">Ladeverteilung</p>
+          <div className="flex h-3 rounded-full overflow-hidden bg-white/10">
+            <motion.div
+              className="bg-gradient-to-r from-green-400 to-emerald-500"
+              style={{ width: `${userProfile.chargingScenario.homeCharging * 100}%` }}
+              layout
+            />
+            <motion.div
+              className="bg-gradient-to-r from-blue-400 to-cyan-500"
+              style={{ width: `${userProfile.chargingScenario.workCharging * 100}%` }}
+              layout
+            />
+            <motion.div
+              className="bg-gradient-to-r from-yellow-400 to-orange-500"
+              style={{ width: `${userProfile.chargingScenario.publicACCharging * 100}%` }}
+              layout
+            />
+            <motion.div
+              className="bg-gradient-to-r from-orange-500 to-red-500"
+              style={{ width: `${userProfile.chargingScenario.publicDCCharging * 100}%` }}
+              layout
+            />
           </div>
-          <div className="mt-4 p-3 bg-vibe-gray-50 rounded-lg">
-            <div className="flex justify-between text-xs text-vibe-gray-600 mb-2">
-              <span>Ladeverteilung</span>
-            </div>
-            <div className="flex h-3 rounded-full overflow-hidden">
-              <div
-                className="bg-ev-green transition-all"
-                style={{ width: `${userProfile.chargingScenario.homeCharging * 100}%` }}
-                title={`Zuhause: ${Math.round(userProfile.chargingScenario.homeCharging * 100)}%`}
-              />
-              <div
-                className="bg-blue-400 transition-all"
-                style={{ width: `${userProfile.chargingScenario.workCharging * 100}%` }}
-                title={`Arbeit: ${Math.round(userProfile.chargingScenario.workCharging * 100)}%`}
-              />
-              <div
-                className="bg-yellow-400 transition-all"
-                style={{ width: `${userProfile.chargingScenario.publicACCharging * 100}%` }}
-                title={`Öffentlich AC: ${Math.round(userProfile.chargingScenario.publicACCharging * 100)}%`}
-              />
-              <div
-                className="bg-orange-500 transition-all"
-                style={{ width: `${userProfile.chargingScenario.publicDCCharging * 100}%` }}
-                title={`Schnellladen: ${Math.round(userProfile.chargingScenario.publicDCCharging * 100)}%`}
-              />
-            </div>
-            <div className="flex justify-between text-xs text-vibe-gray-500 mt-2">
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-ev-green" /> Zuhause
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-blue-400" /> Arbeit
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-yellow-400" /> AC
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-orange-500" /> DC
-              </span>
-            </div>
+          <div className="flex justify-between mt-3 text-[10px] text-white/40">
+            <span>🏠 Zuhause</span>
+            <span>🏢 Arbeit</span>
+            <span>🔌 AC</span>
+            <span>⚡ DC</span>
           </div>
-        </Section>
+        </div>
       </Card>
 
-      {/* Energiepreise */}
-      <Card variant="bordered" padding="md">
-        <Section title="💰 Money Talk">
+      {/* Preise */}
+      <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6">
+        <SectionHeader
+          title="Energiepreise"
+          subtitle="Was zahlst du pro kWh / Liter?"
+          emoji="💰"
+        />
+
+        <div className="space-y-6">
           <Slider
             label="Strompreis (Zuhause)"
             value={userProfile.electricityPrice}
@@ -250,13 +310,19 @@ export const InputPanel: React.FC = () => {
             step={SLIDER_RANGES.fuelPrice.step}
             formatValue={(v) => `${v.toFixed(2)} €/l`}
           />
-        </Section>
+        </div>
       </Card>
 
       {/* Extras */}
-      <Card variant="bordered" padding="md">
-        <Section title="✨ Power-Ups">
-          <div className="space-y-4">
+      <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6">
+        <SectionHeader
+          title="Dein Setup"
+          subtitle="Hast du schon Equipment?"
+          emoji="🔧"
+        />
+
+        <div className="space-y-4">
+          <div className="p-4 bg-white/5 rounded-2xl">
             <Toggle
               label="Wallbox vorhanden"
               description="Private Ladestation zu Hause"
@@ -264,9 +330,9 @@ export const InputPanel: React.FC = () => {
               onChange={(value) => {
                 setHasWallbox(value);
                 if (value) {
-                  setWallboxCost(0); // Wallbox schon da = keine Kosten
+                  setWallboxCost(0);
                 } else {
-                  setWallboxCost(1500); // Neuanschaffung = Standardkosten
+                  setWallboxCost(1500);
                 }
               }}
             />
@@ -275,6 +341,7 @@ export const InputPanel: React.FC = () => {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
+                className="mt-4 pt-4 border-t border-white/10"
               >
                 <Slider
                   label="Wallbox-Kosten (inkl. Installation)"
@@ -289,10 +356,10 @@ export const InputPanel: React.FC = () => {
             )}
           </div>
 
-          <div className="space-y-4 pt-4 border-t border-vibe-gray-100">
+          <div className="p-4 bg-white/5 rounded-2xl">
             <Toggle
-              label="Solaranlage vorhanden"
-              description="Eigener Solarstrom für günstigeres Laden"
+              label="Solaranlage vorhanden ☀️"
+              description="Eigener Solarstrom zum Laden"
               checked={userProfile.hasSolarPanels}
               onChange={setHasSolarPanels}
             />
@@ -301,6 +368,7 @@ export const InputPanel: React.FC = () => {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
+                className="mt-4 pt-4 border-t border-white/10"
               >
                 <Slider
                   label="Eigenverbrauchsanteil"
@@ -314,8 +382,203 @@ export const InputPanel: React.FC = () => {
               </motion.div>
             )}
           </div>
-        </Section>
+        </div>
       </Card>
+
+      {/* Erweiterter Modus Toggle */}
+      <motion.button
+        onClick={() => setShowAdvanced(!showAdvanced)}
+        className="w-full p-4 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 rounded-2xl flex items-center justify-between hover:border-indigo-500/50 transition-colors"
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.99 }}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center">
+            <Sparkles className="w-5 h-5 text-white" />
+          </div>
+          <div className="text-left">
+            <p className="font-bold text-white">Erweiterter Modus</p>
+            <p className="text-xs text-white/50">Firmenwagen, Parkkosten, Preisprognose...</p>
+          </div>
+        </div>
+        <motion.div
+          animate={{ rotate: showAdvanced ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <ChevronDown className="w-5 h-5 text-indigo-400" />
+        </motion.div>
+      </motion.button>
+
+      {/* Erweiterter Modus Content */}
+      <AnimatePresence>
+        {showAdvanced && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-6 overflow-hidden"
+          >
+            {/* Firmenwagen */}
+            <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6">
+              <SectionHeader
+                title="Firmenwagen?"
+                subtitle="0.25% vs 1% Regelung"
+                emoji="🏢"
+              />
+
+              <div className="space-y-4">
+                <div className="p-4 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 rounded-2xl border border-blue-500/20">
+                  <Toggle
+                    label="Dienstwagen / Firmenwagen"
+                    description="Geldwerter Vorteil versteuern"
+                    checked={userProfile.isCompanyCar}
+                    onChange={setIsCompanyCar}
+                  />
+                  {userProfile.isCompanyCar && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mt-4 pt-4 border-t border-white/10"
+                    >
+                      <Slider
+                        label="Dein Steuersatz"
+                        value={userProfile.taxBracket}
+                        onChange={setTaxBracket}
+                        min={0.25}
+                        max={0.45}
+                        step={0.01}
+                        formatValue={(v) => `${Math.round(v * 100)}%`}
+                      />
+                      <div className="mt-3 p-3 bg-emerald-500/10 rounded-xl">
+                        <p className="text-xs text-emerald-400">
+                          <Building2 className="w-3 h-3 inline mr-1" />
+                          E-Auto: nur <strong>0.25%</strong> vom Listenpreis versteuern (Verbrenner: 1%)
+                        </p>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              </div>
+            </Card>
+
+            {/* Großstadt & Parken */}
+            <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6">
+              <SectionHeader
+                title="Großstadt-Bonus"
+                subtitle="E-Autos parken oft günstiger"
+                emoji="🏙️"
+              />
+
+              <div className="space-y-4">
+                <div className="p-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-2xl border border-green-500/20">
+                  <Toggle
+                    label="Wohnst du in einer Großstadt?"
+                    description="Mit E-Auto Parkvorteilen"
+                    checked={userProfile.livesInCity}
+                    onChange={setLivesInCity}
+                  />
+                  {userProfile.livesInCity && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mt-4 pt-4 border-t border-white/10"
+                    >
+                      <Slider
+                        label="Monatliche Parkkosten"
+                        value={userProfile.monthlyParkingCost}
+                        onChange={setMonthlyParkingCost}
+                        min={50}
+                        max={300}
+                        step={10}
+                        formatValue={(v) => formatCurrency(v)}
+                      />
+                      <div className="mt-3 p-3 bg-emerald-500/10 rounded-xl">
+                        <p className="text-xs text-emerald-400">
+                          <ParkingCircle className="w-3 h-3 inline mr-1" />
+                          E-Autos: <strong>50% Rabatt</strong> auf Parkgebühren in vielen Städten
+                        </p>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              </div>
+            </Card>
+
+            {/* Arbeitgeber-Laden */}
+            <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6">
+              <SectionHeader
+                title="Laden beim Arbeitgeber"
+                subtitle="Kostenloses Laden am Arbeitsplatz"
+                emoji="🏭"
+              />
+
+              <div className="p-4 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 rounded-2xl border border-cyan-500/20">
+                <Toggle
+                  label="Arbeitgeber bietet Ladestation"
+                  description="Kostenlos oder vergünstigt laden"
+                  checked={userProfile.hasEmployerCharging}
+                  onChange={setHasEmployerCharging}
+                />
+                {userProfile.hasEmployerCharging && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="mt-3 p-3 bg-cyan-500/10 rounded-xl"
+                  >
+                    <p className="text-xs text-cyan-400">
+                      <Plug className="w-3 h-3 inline mr-1" />
+                      Arbeitsweg-Laden ist <strong>kostenlos</strong> - spart 300-500€/Jahr
+                    </p>
+                  </motion.div>
+                )}
+              </div>
+            </Card>
+
+            {/* Preisprognose */}
+            <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6">
+              <SectionHeader
+                title="Preisentwicklung"
+                subtitle="Wie entwickeln sich Energie- & Benzinpreise?"
+                emoji="📈"
+              />
+
+              <div className="grid grid-cols-3 gap-3">
+                {priceForecastOptions.map((option) => (
+                  <motion.button
+                    key={option.id}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => setPriceForecast(option.id)}
+                    className={`p-4 rounded-2xl text-center transition-all border-2 ${
+                      userProfile.priceForecast === option.id
+                        ? 'bg-gradient-to-br from-orange-500/30 to-red-500/20 border-orange-500/50'
+                        : 'bg-white/5 border-white/10 hover:border-white/20'
+                    }`}
+                  >
+                    <span className="text-xl mb-2 block">{option.emoji}</span>
+                    <p className={`font-bold text-sm ${
+                      userProfile.priceForecast === option.id ? 'text-orange-300' : 'text-white'
+                    }`}>
+                      {option.label}
+                    </p>
+                    <p className="text-[10px] text-white/50 mt-1">{option.description}</p>
+                  </motion.button>
+                ))}
+              </div>
+
+              <div className="mt-4 p-3 bg-orange-500/10 rounded-xl">
+                <p className="text-xs text-orange-400">
+                  <TrendingUp className="w-3 h-3 inline mr-1" />
+                  CO2-Steuer macht Benzin langfristig <strong>deutlich teurer</strong>
+                </p>
+              </div>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -12,7 +12,6 @@ import {
 } from 'recharts';
 import {
   Fuel,
-  Leaf,
   Repeat,
   Check,
   Shield,
@@ -25,6 +24,14 @@ import {
   Settings,
   ClipboardList,
   LifeBuoy,
+  TreePine,
+  Plane,
+  Sparkles,
+  PartyPopper,
+  Building2,
+  ParkingCircle,
+  Plug,
+  TrendingUp,
 } from 'lucide-react';
 import { VIBE_ABO } from '@/data/defaults';
 import { useCalculatorStore } from '@/hooks/useCalculatorStore';
@@ -47,10 +54,7 @@ const AnimatedNumber: React.FC<{
     const animate = () => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
-
-      // Easing function (ease-out)
       const eased = 1 - Math.pow(1 - progress, 3);
-
       const current = Math.round(startValue + (value - startValue) * eased);
       setDisplayValue(current);
 
@@ -90,89 +94,38 @@ export const ResultPanel: React.FC = () => {
 
     const years = userProfile.holdingPeriodYears;
     const annualKm = userProfile.annualMileage;
-
-    // Real calculated values from the comparison
     const { iceLeasing } = result;
 
-    // Estimate breakdowns (since we only have totals)
-    // Reifen: ca. 4ct/km (Reifenverschleiß + Wechsel)
     const tiresTotal = Math.round(annualKm * years * 0.04);
-    // TÜV: ca. 100€ alle 2 Jahre
     const tuvTotal = Math.round((years / 2) * 100);
-    // Zulassung: einmalig ~80€
     const registrationTotal = 80;
-    // Pannenhilfe: ca. 100€/Jahr
     const roadsideTotal = 100 * years;
 
     return [
-      {
-        id: 'insurance',
-        label: 'Versicherung',
-        icon: Shield,
-        totalCost: Math.round(iceLeasing.totalInsuranceCost)
-      },
-      {
-        id: 'tax',
-        label: 'Kfz-Steuer',
-        icon: FileText,
-        totalCost: Math.round(iceLeasing.totalTaxCost)
-      },
-      {
-        id: 'maintenance',
-        label: 'Wartung & Verschleiß',
-        icon: Wrench,
-        totalCost: Math.round(iceLeasing.totalMaintenanceCost)
-      },
-      {
-        id: 'tires',
-        label: 'Reifen & Wechsel',
-        icon: Car,
-        totalCost: tiresTotal
-      },
-      {
-        id: 'tuv',
-        label: 'TÜV / HU',
-        icon: Settings,
-        totalCost: tuvTotal
-      },
-      {
-        id: 'registration',
-        label: 'Zulassung',
-        icon: ClipboardList,
-        totalCost: registrationTotal
-      },
-      {
-        id: 'roadside',
-        label: 'Pannenhilfe',
-        icon: LifeBuoy,
-        totalCost: roadsideTotal
-      },
-      {
-        id: 'km',
-        label: `${(annualKm / 1000).toFixed(0)}k km inklusive`,
-        icon: CircleDollarSign,
-        totalCost: 0
-      },
+      { id: 'fuel', label: 'Benzinkosten', icon: Fuel, totalCost: Math.round(iceLeasing.totalFuelCost) },
+      { id: 'insurance', label: 'Versicherung', icon: Shield, totalCost: Math.round(iceLeasing.totalInsuranceCost) },
+      { id: 'tax', label: 'Kfz-Steuer', icon: FileText, totalCost: Math.round(iceLeasing.totalTaxCost) },
+      { id: 'maintenance', label: 'Wartung & Verschleiß', icon: Wrench, totalCost: Math.round(iceLeasing.totalMaintenanceCost) },
+      { id: 'tires', label: 'Reifen & Wechsel', icon: Car, totalCost: tiresTotal },
+      { id: 'tuv', label: 'TÜV / HU', icon: Settings, totalCost: tuvTotal },
+      { id: 'registration', label: 'Zulassung', icon: ClipboardList, totalCost: registrationTotal },
+      { id: 'roadside', label: 'Pannenhilfe', icon: LifeBuoy, totalCost: roadsideTotal },
+      { id: 'km', label: `${(annualKm / 1000).toFixed(0)}k km inklusive`, icon: CircleDollarSign, totalCost: 0 },
     ];
   }, [result, userProfile.holdingPeriodYears, userProfile.annualMileage]);
 
-  // Accumulated extra cost based on visible USPs
   const accumulatedExtraCost = useMemo(() => {
     return uspItems.slice(0, visibleUsps).reduce((sum, usp) => sum + usp.totalCost, 0);
   }, [uspItems, visibleUsps]);
 
-  // Reset and start animation when result changes
   useEffect(() => {
     if (result) {
       setAnimationPhase(0);
       setVisibleUsps(0);
       setAnimationKey(prev => prev + 1);
 
-      // Start USP animation sequence
       const timer = setTimeout(() => {
         setAnimationPhase(1);
-
-        // Reveal USPs one by one
         uspItems.forEach((_, index) => {
           setTimeout(() => {
             setVisibleUsps(index + 1);
@@ -186,20 +139,20 @@ export const ResultPanel: React.FC = () => {
 
   if (!result) {
     return (
-      <Card variant="bordered" padding="lg" className="h-full flex flex-col items-center justify-center text-center bg-gradient-to-br from-vibe-gray-50 to-white">
+      <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 flex flex-col items-center justify-center text-center min-h-[400px]">
         <motion.div
-          animate={{ y: [0, -10, 0] }}
+          animate={{ y: [0, -10, 0], rotate: [0, 5, -5, 0] }}
           transition={{ duration: 2, repeat: Infinity }}
-          className="text-6xl mb-4"
+          className="text-6xl mb-6"
         >
           🚗
         </motion.div>
-        <h3 className="text-lg font-bold text-vibe-gray-600">Noch kein Auto gewählt!</h3>
-        <p className="text-sm text-vibe-gray-400 mt-2 max-w-xs">
-          Pick links deine Rides und wir zeigen dir, wo das Geld bleibt 💸
+        <h3 className="text-xl font-bold text-white mb-2">Wähl erst mal deine Rides!</h3>
+        <p className="text-white/50 max-w-xs">
+          Pick links deine Autos und wir zeigen dir, wo die Kohle bleibt 💸
         </p>
         <motion.div
-          className="mt-4 text-2xl"
+          className="mt-6 text-3xl"
           animate={{ x: [-20, 20, -20] }}
           transition={{ duration: 1.5, repeat: Infinity }}
         >
@@ -210,100 +163,101 @@ export const ResultPanel: React.FC = () => {
   }
 
   const { vibeAbo, iceLeasing, savingsTotal, co2Savings, co2SavingsEquivalent } = result;
-
-  // Display price for ICE that grows with USPs
   const displayIcePrice = iceLeasing.totalMonthlyRates + accumulatedExtraCost;
 
   return (
-    <div className="space-y-4 lg:sticky lg:top-4">
-      {/* Animated Price Comparison */}
+    <div className="space-y-6">
+      {/* Main Comparison Card */}
       <motion.div
         key={animationKey}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <Card variant="bordered" padding="md" className="overflow-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-abo-purple/5 via-transparent to-ice-orange/5 pointer-events-none" />
-          <div className="grid grid-cols-2 gap-4 relative">
+        <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 overflow-hidden relative">
+          {/* Decorative gradient */}
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-transparent to-orange-500/10 pointer-events-none" />
+
+          {/* Price Comparison */}
+          <div className="grid grid-cols-2 gap-4 mb-6 relative">
             {/* VIBE Price */}
             <motion.div
-              className="text-center p-4 bg-gradient-to-br from-abo-purple/10 to-purple-500/5 rounded-2xl border-2 border-abo-purple/40 relative overflow-hidden"
+              className="text-center p-5 bg-gradient-to-br from-purple-500/20 to-pink-500/10 rounded-2xl border border-purple-500/30 relative overflow-hidden"
               whileHover={{ scale: 1.02 }}
             >
-              <div className="absolute top-1 right-1 text-lg">✨</div>
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <Repeat className="w-4 h-4 text-abo-purple" />
-                <span className="text-xs font-bold text-abo-purple">E-Auto Abo 🔋</span>
+              <motion.div
+                className="absolute top-2 right-2"
+                animate={{ rotate: [0, 15, -15, 0] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <Sparkles className="w-5 h-5 text-purple-400" />
+              </motion.div>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-500/20 rounded-full mb-3">
+                <Zap className="w-4 h-4 text-purple-400" />
+                <span className="text-xs font-bold text-purple-300">E-Auto Abo ⚡</span>
               </div>
               <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
+                initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.3, type: 'spring' }}
               >
                 <AnimatedNumber
                   value={vibeAbo.totalCostOfOwnership}
-                  className="text-2xl font-black text-abo-purple"
+                  className="text-3xl font-black text-white"
                 />
               </motion.div>
-              <p className="text-[10px] text-abo-purple/70 mt-1 font-medium">All-in, chill mal 😎</p>
+              <p className="text-xs text-white/50 mt-2">Gesamtkosten</p>
+              <p className="text-xs text-purple-400 mt-1">inkl. {formatCurrency(vibeAbo.totalEnergyCost)} Strom ⚡</p>
             </motion.div>
 
-            {/* ICE Price - grows with USPs */}
+            {/* ICE Price */}
             <motion.div
-              className="text-center p-4 bg-gradient-to-br from-ice-orange/10 to-red-500/5 rounded-2xl border-2 border-ice-orange/40 relative overflow-hidden"
+              className="text-center p-5 bg-gradient-to-br from-orange-500/20 to-red-500/10 rounded-2xl border border-orange-500/30 relative overflow-hidden"
               whileHover={{ scale: 1.02 }}
             >
-              <div className="absolute top-1 right-1 text-lg">💨</div>
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <Fuel className="w-4 h-4 text-ice-orange" />
-                <span className="text-xs font-bold text-ice-orange">Verbrenner 🦕</span>
+              <div className="absolute top-2 right-2 text-lg">🦕</div>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-orange-500/20 rounded-full mb-3">
+                <Fuel className="w-4 h-4 text-orange-400" />
+                <span className="text-xs font-bold text-orange-300">Verbrenner</span>
               </div>
               <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
+                initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.3, type: 'spring' }}
                 className="space-y-1"
               >
-                {/* Base leasing rate */}
-                <p className="text-sm text-vibe-gray-600">
+                <p className="text-sm text-white/40 line-through">
                   {formatCurrency(iceLeasing.totalMonthlyRates)}
                 </p>
-                {/* Extra costs line */}
                 <AnimatePresence>
                   {accumulatedExtraCost > 0 && (
                     <motion.p
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      className="text-sm text-ice-orange font-semibold"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-xs text-orange-400 font-bold"
                     >
                       + {formatCurrency(accumulatedExtraCost)} 😬
                     </motion.p>
                   )}
                 </AnimatePresence>
-                {/* Total */}
-                <div className="pt-1 border-t border-ice-orange/30">
-                  <AnimatedNumber
-                    value={displayIcePrice}
-                    duration={800}
-                    className="text-2xl font-black text-ice-orange"
-                  />
-                </div>
+                <AnimatedNumber
+                  value={displayIcePrice}
+                  duration={800}
+                  className="text-3xl font-black text-white"
+                />
               </motion.div>
-              <motion.p
-                className="text-[10px] text-ice-orange/70 mt-1 font-medium"
-                animate={{ opacity: visibleUsps > 0 ? 1 : 0.5 }}
-              >
-                {visibleUsps > 0 ? 'Autsch, die Realität 💸' : 'Nur Leasing... wait for it'}
-              </motion.p>
+              <p className="text-xs text-white/50 mt-2">
+                {visibleUsps > 0 ? 'Reale Kosten 💀' : 'Nur Leasing...'}
+              </p>
             </motion.div>
           </div>
 
-          {/* USP Animation */}
-          <div className="mt-4 pt-4 border-t border-vibe-gray-100">
-            <p className="text-xs font-bold text-vibe-gray-600 mb-3">
-              🎁 Bei uns dabei – beim Dino extra bezahlen:
+          {/* USP List */}
+          <div className="border-t border-white/10 pt-5 mb-5 relative">
+            <p className="text-sm font-bold text-white/70 mb-4 flex items-center gap-2">
+              <span>🎁</span> Diese Kosten kommen beim Dino noch dazu:
             </p>
+
             <div className="space-y-2">
               {uspItems.map((usp, index) => {
                 const IconComponent = usp.icon;
@@ -312,36 +266,30 @@ export const ResultPanel: React.FC = () => {
                 return (
                   <motion.div
                     key={usp.id}
-                    initial={{ opacity: 0, x: -20, height: 0 }}
+                    initial={{ opacity: 0, x: -20 }}
                     animate={{
                       opacity: isVisible ? 1 : 0.3,
                       x: isVisible ? 0 : -20,
-                      height: 'auto',
                     }}
-                    transition={{ duration: 0.3, delay: isVisible ? 0 : 0 }}
-                    className="flex items-center justify-between py-1.5 px-2 rounded-lg"
-                    style={{
-                      backgroundColor: isVisible ? 'rgba(99, 102, 241, 0.05)' : 'transparent',
-                    }}
+                    transition={{ duration: 0.3 }}
+                    className={cn(
+                      'flex items-center justify-between py-2.5 px-3 rounded-xl transition-all',
+                      isVisible ? 'bg-gradient-to-r from-purple-500/20 to-transparent' : 'bg-white/5'
+                    )}
                   >
-                    <div className="flex items-center gap-2">
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: isVisible ? 1 : 0.5 }}
-                        transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                        className={cn(
-                          'p-1 rounded',
-                          isVisible ? 'bg-abo-purple/10' : 'bg-vibe-gray-100'
-                        )}
-                      >
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        'w-8 h-8 rounded-lg flex items-center justify-center',
+                        isVisible ? 'bg-purple-500/30' : 'bg-white/10'
+                      )}>
                         <IconComponent className={cn(
-                          'w-3 h-3',
-                          isVisible ? 'text-abo-purple' : 'text-vibe-gray-400'
+                          'w-4 h-4',
+                          isVisible ? 'text-purple-300' : 'text-white/40'
                         )} />
-                      </motion.div>
+                      </div>
                       <span className={cn(
-                        'text-xs',
-                        isVisible ? 'text-vibe-gray-700 font-medium' : 'text-vibe-gray-400'
+                        'text-sm',
+                        isVisible ? 'text-white font-medium' : 'text-white/40'
                       )}>
                         {usp.label}
                       </span>
@@ -349,20 +297,17 @@ export const ResultPanel: React.FC = () => {
                         <motion.div
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          className="ml-1"
+                          transition={{ type: 'spring', stiffness: 500 }}
                         >
-                          <Check className="w-3 h-3 text-abo-purple" />
+                          <Check className="w-4 h-4 text-emerald-400" />
                         </motion.div>
                       )}
                     </div>
                     {usp.totalCost > 0 && (
                       <motion.span
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{
-                          opacity: isVisible ? 1 : 0,
-                          scale: isVisible ? 1 : 0.8,
-                        }}
-                        className="text-xs font-semibold text-ice-orange"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: isVisible ? 1 : 0 }}
+                        className="text-sm font-bold text-orange-400"
                       >
                         +{formatCurrency(usp.totalCost)}
                       </motion.span>
@@ -373,193 +318,253 @@ export const ResultPanel: React.FC = () => {
             </div>
           </div>
 
-          {/* Total Savings */}
+          {/* Savings Reveal */}
           <AnimatePresence>
             {visibleUsps === uspItems.length && (
               <motion.div
                 initial={{ opacity: 0, y: 20, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
-                className="mt-4 p-4 bg-gradient-to-r from-abo-purple via-purple-600 to-pink-500 rounded-2xl shadow-lg shadow-abo-purple/30 relative overflow-hidden"
+                className="p-6 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 rounded-2xl shadow-lg shadow-emerald-500/30 relative overflow-hidden"
               >
                 <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvc3ZnPg==')] opacity-50" />
                 <div className="flex items-center justify-between relative">
-                  <div className="flex items-center gap-2">
-                    <motion.span
-                      animate={{ rotate: [0, 15, -15, 0] }}
+                  <div className="flex items-center gap-3">
+                    <motion.div
+                      animate={{ rotate: [0, 15, -15, 0], scale: [1, 1.1, 1] }}
                       transition={{ duration: 0.5, delay: 0.5 }}
-                      className="text-2xl"
                     >
-                      🎉
-                    </motion.span>
-                    <span className="text-sm font-bold text-white">
-                      Boom! Du sparst:
-                    </span>
+                      <PartyPopper className="w-8 h-8 text-white" />
+                    </motion.div>
+                    <div>
+                      <p className="text-sm text-white/80 font-bold">BOOM! Du sparst:</p>
+                      <p className="text-xs text-white/60">über {userProfile.holdingPeriodYears} Jahre</p>
+                    </div>
                   </div>
                   <motion.span
                     initial={{ scale: 2, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ type: 'spring', stiffness: 300, delay: 0.4 }}
-                    className="text-2xl font-black text-white drop-shadow-lg"
+                    className="text-4xl font-black text-white drop-shadow-lg"
                   >
                     {formatCurrency(Math.abs(savingsTotal))}
                   </motion.span>
                 </div>
-                <p className="text-[10px] text-white/70 mt-2 text-center">
-                  Das sind {Math.round(Math.abs(savingsTotal) / userProfile.holdingPeriodYears / 12)} € pro Monat mehr für die schönen Dinge 🍕🎮✈️
+                <p className="text-sm text-white/70 mt-4 text-center">
+                  Das sind {formatCurrency(Math.round(Math.abs(savingsTotal) / userProfile.holdingPeriodYears / 12))} pro Monat mehr für Pizza 🍕
                 </p>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* THG-Quote Bonus */}
+          {/* THG Quote Bonus */}
           <AnimatePresence>
             {visibleUsps === uspItems.length && (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6, type: 'spring' }}
-                className="mt-3 p-3 bg-gradient-to-r from-emerald-50 to-green-50 border border-green-300 rounded-xl relative overflow-hidden"
+                transition={{ delay: 0.6 }}
+                className="mt-4 p-4 bg-gradient-to-r from-yellow-500/20 to-orange-500/10 border border-yellow-500/30 rounded-2xl"
               >
-                <div className="absolute -right-2 -top-2 text-3xl opacity-20">🌱</div>
-                <div className="flex items-center justify-between relative">
-                  <div className="flex items-center gap-2">
-                    <Leaf className="w-4 h-4 text-green-600" />
-                    <span className="text-sm font-semibold text-green-700">Gratis Geld vom Staat 🤑</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-yellow-500/20 rounded-xl flex items-center justify-center">
+                      <span className="text-xl">🤑</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-yellow-300">Gratis Geld vom Staat!</p>
+                      <p className="text-xs text-white/50">THG-Quote für E-Auto Fahrer</p>
+                    </div>
                   </div>
-                  <span className="text-lg font-black text-green-600">
+                  <span className="text-xl font-black text-yellow-400">
                     +{formatCurrency(300 * userProfile.holdingPeriodYears)}
                   </span>
                 </div>
-                <p className="text-[10px] text-green-600/80 mt-1">
-                  THG-Quote: Weil du CO₂ sparst, kriegst du Cash 💚
-                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Active Advanced Features */}
+          <AnimatePresence>
+            {visibleUsps === uspItems.length && (userProfile.isCompanyCar || userProfile.livesInCity || userProfile.hasEmployerCharging || userProfile.priceForecast !== 'moderate') && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8 }}
+                className="mt-4 space-y-2"
+              >
+                <p className="text-xs text-white/50 font-medium">🔮 Erweiterte Berechnung aktiv:</p>
+                <div className="flex flex-wrap gap-2">
+                  {userProfile.isCompanyCar && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 border border-blue-500/30 rounded-full"
+                    >
+                      <Building2 className="w-3 h-3 text-blue-400" />
+                      <span className="text-xs text-blue-300">Firmenwagen</span>
+                    </motion.div>
+                  )}
+                  {userProfile.livesInCity && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.1 }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-500/20 border border-green-500/30 rounded-full"
+                    >
+                      <ParkingCircle className="w-3 h-3 text-green-400" />
+                      <span className="text-xs text-green-300">Parkbonus</span>
+                    </motion.div>
+                  )}
+                  {userProfile.hasEmployerCharging && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.2 }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500/20 border border-cyan-500/30 rounded-full"
+                    >
+                      <Plug className="w-3 h-3 text-cyan-400" />
+                      <span className="text-xs text-cyan-300">Arbeitgeber-Laden</span>
+                    </motion.div>
+                  )}
+                  {userProfile.priceForecast !== 'moderate' && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.3 }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/20 border border-orange-500/30 rounded-full"
+                    >
+                      <TrendingUp className="w-3 h-3 text-orange-400" />
+                      <span className="text-xs text-orange-300">
+                        {userProfile.priceForecast === 'conservative' ? 'Konservativ' : 'Aggressiv'}
+                      </span>
+                    </motion.div>
+                  )}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
         </Card>
       </motion.div>
 
-      {/* VIBE Value Propositions */}
-      <Card variant="bordered" padding="sm" className="bg-gradient-to-r from-abo-purple/5 to-transparent">
-        <div className="grid grid-cols-2 gap-2">
+      {/* Benefits Grid */}
+      <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-5">
+        <p className="text-sm font-bold text-white/70 mb-4">💪 Warum VIBE ballert:</p>
+        <div className="grid grid-cols-2 gap-3">
           {VIBE_ABO.benefits.map((benefit, index) => (
             <motion.div
               key={benefit.id}
-              className="flex items-start gap-2 p-2"
+              className="p-3 bg-white/5 rounded-xl"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 * index }}
+              whileHover={{ scale: 1.03, backgroundColor: 'rgba(255,255,255,0.1)' }}
             >
-              <div className="p-1 rounded bg-abo-purple/10 shrink-0">
-                {benefit.id === 'flex' && <Calendar className="w-3 h-3 text-abo-purple" />}
-                {benefit.id === 'cost' && <Zap className="w-3 h-3 text-abo-purple" />}
-                {benefit.id === 'risk' && <Shield className="w-3 h-3 text-abo-purple" />}
-                {benefit.id === 'simple' && <Wrench className="w-3 h-3 text-abo-purple" />}
+              <div className="w-8 h-8 bg-gradient-to-br from-purple-500/30 to-pink-500/30 rounded-lg flex items-center justify-center mb-2">
+                {benefit.id === 'flex' && <Calendar className="w-4 h-4 text-purple-300" />}
+                {benefit.id === 'cost' && <CircleDollarSign className="w-4 h-4 text-purple-300" />}
+                {benefit.id === 'risk' && <Shield className="w-4 h-4 text-purple-300" />}
+                {benefit.id === 'simple' && <Repeat className="w-4 h-4 text-purple-300" />}
               </div>
-              <div>
-                <p className="text-xs font-semibold text-vibe-gray-700">{benefit.label}</p>
-                <p className="text-[10px] text-vibe-gray-500 leading-tight">{benefit.description}</p>
-              </div>
+              <p className="text-sm font-bold text-white">{benefit.label}</p>
+              <p className="text-xs text-white/50 mt-0.5">{benefit.description}</p>
             </motion.div>
           ))}
         </div>
       </Card>
 
       {/* Chart */}
-      <Card variant="bordered" padding="sm" className="relative overflow-hidden">
-        <div className="absolute -top-10 -right-10 w-24 h-24 bg-gradient-to-br from-abo-purple/10 to-transparent rounded-full blur-2xl" />
-        <h4 className="text-sm font-bold text-vibe-gray-700 mb-3">📈 So läuft's über Zeit</h4>
-        <div className="h-48">
+      <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-5">
+        <p className="text-sm font-bold text-white/70 mb-4">📈 So läuft's über Zeit:</p>
+        <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E8E8EC" />
+            <LineChart data={chartData} margin={{ top: 5, right: 10, left: -15, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
               <XAxis
                 dataKey="month"
                 tickFormatter={(m) => m === 0 ? '0' : `${Math.floor(m / 12)}J`}
-                stroke="#9999A8"
-                fontSize={10}
+                stroke="rgba(255,255,255,0.3)"
+                fontSize={11}
               />
               <YAxis
                 tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
-                stroke="#9999A8"
-                fontSize={10}
+                stroke="rgba(255,255,255,0.3)"
+                fontSize={11}
               />
               <Tooltip
                 formatter={(value: number, name: string) => [
                   formatCurrency(value),
-                  name === 'vibeAboCumulative' ? 'VIBE' : 'Leasing'
+                  name === 'vibeAboCumulative' ? 'E-Auto Abo ⚡' : 'Verbrenner 🦕'
                 ]}
                 labelFormatter={(month) => `Monat ${month}`}
                 contentStyle={{
-                  borderRadius: '8px',
-                  border: 'none',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  backgroundColor: 'rgba(15,15,30,0.95)',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
                   fontSize: '12px',
+                  color: 'white',
                 }}
               />
               <Line
                 type="monotone"
                 dataKey="vibeAboCumulative"
-                stroke="#6366F1"
-                strokeWidth={2}
+                stroke="#A855F7"
+                strokeWidth={3}
                 dot={false}
-                name="VIBE"
+                name="E-Auto Abo ⚡"
               />
               <Line
                 type="monotone"
                 dataKey="iceLeasingCumulative"
-                stroke="#FF6B35"
-                strokeWidth={2}
+                stroke="#F97316"
+                strokeWidth={3}
                 dot={false}
-                name="Leasing"
+                name="Verbrenner 🦕"
               />
               <Legend
-                iconSize={8}
-                wrapperStyle={{ fontSize: '10px' }}
+                iconSize={10}
+                wrapperStyle={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}
               />
             </LineChart>
           </ResponsiveContainer>
         </div>
       </Card>
 
-      {/* CO2 Compact */}
-      <Card variant="bordered" padding="sm" className="bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 relative overflow-hidden">
-        <div className="absolute -right-4 -bottom-4 text-6xl opacity-10">🌍</div>
-        <div className="flex items-center gap-2 mb-3">
-          <motion.span
-            animate={{ rotate: [0, 10, -10, 0] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="text-xl"
-          >
-            🌱
-          </motion.span>
-          <span className="text-sm font-bold text-green-700">Planet sagt Danke!</span>
-        </div>
-        <p className="text-2xl font-black text-green-600 mb-3">
-          {formatCO2(co2Savings)} weniger CO₂
-        </p>
-        <div className="grid grid-cols-2 gap-2 text-center">
+      {/* CO2 Impact */}
+      <Card className="bg-gradient-to-br from-emerald-500/20 via-green-500/10 to-teal-500/20 backdrop-blur-xl border border-emerald-500/30 rounded-3xl p-5">
+        <div className="flex items-center gap-3 mb-4">
           <motion.div
-            className="p-3 bg-white/80 rounded-xl border border-green-200 cursor-pointer"
+            className="w-12 h-12 bg-emerald-500/30 rounded-xl flex items-center justify-center"
+            animate={{ rotate: [0, 10, -10, 0] }}
+            transition={{ duration: 3, repeat: Infinity }}
+          >
+            <span className="text-2xl">🌍</span>
+          </motion.div>
+          <div>
+            <p className="text-sm font-bold text-emerald-300">Planet sagt Danke!</p>
+            <p className="text-2xl font-black text-white">{formatCO2(co2Savings)} weniger CO₂</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <motion.div
+            className="p-4 bg-white/10 rounded-xl text-center"
             whileHover={{ scale: 1.05, rotate: -2 }}
           >
-            <span className="text-2xl block mb-1">✈️</span>
-            <p className="text-lg font-black text-vibe-gray-700">{co2SavingsEquivalent.flights}x</p>
-            <p className="text-[10px] text-vibe-gray-500 font-medium">Malle-Trips gespart</p>
+            <Plane className="w-6 h-6 text-emerald-400 mx-auto mb-2" />
+            <p className="text-2xl font-black text-white">{co2SavingsEquivalent.flights}x</p>
+            <p className="text-xs text-white/50">Malle-Trips gespart ✈️</p>
           </motion.div>
           <motion.div
-            className="p-3 bg-white/80 rounded-xl border border-green-200 cursor-pointer"
+            className="p-4 bg-white/10 rounded-xl text-center"
             whileHover={{ scale: 1.05, rotate: 2 }}
           >
-            <span className="text-2xl block mb-1">🌳</span>
-            <p className="text-lg font-black text-vibe-gray-700">{co2SavingsEquivalent.trees}</p>
-            <p className="text-[10px] text-vibe-gray-500 font-medium">Bäume pro Jahr</p>
+            <TreePine className="w-6 h-6 text-emerald-400 mx-auto mb-2" />
+            <p className="text-2xl font-black text-white">{co2SavingsEquivalent.trees}</p>
+            <p className="text-xs text-white/50">Bäume pro Jahr 🌳</p>
           </motion.div>
         </div>
-        <p className="text-[10px] text-center text-green-600/70 mt-3">
-          Flexen mit gutem Gewissen 💚
-        </p>
       </Card>
     </div>
   );

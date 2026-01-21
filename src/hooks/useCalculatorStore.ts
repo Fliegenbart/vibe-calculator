@@ -6,6 +6,7 @@ import {
   VehicleClass,
   Vehicle,
   ChargingScenario,
+  PriceForecast,
 } from '@/types';
 import { DEFAULT_USER_PROFILE, CHARGING_SCENARIOS } from '@/data/defaults';
 import { getDefaultEVForClass, getDefaultICEForClass } from '@/data/vehicles';
@@ -37,7 +38,15 @@ interface CalculatorStore extends CalculatorState {
   setSolarSelfConsumptionRate: (rate: number) => void;
   setFinancingType: (type: 'cash' | 'leasing' | 'credit') => void;
   setPostalCode: (code: string) => void;
-  
+
+  // Erweiterter Modus
+  setIsCompanyCar: (isCompanyCar: boolean) => void;
+  setTaxBracket: (taxBracket: number) => void;
+  setLivesInCity: (livesInCity: boolean) => void;
+  setMonthlyParkingCost: (cost: number) => void;
+  setHasEmployerCharging: (has: boolean) => void;
+  setPriceForecast: (forecast: PriceForecast) => void;
+
   // Calculation
   calculate: () => void;
   
@@ -179,6 +188,37 @@ export const useCalculatorStore = create<CalculatorStore>()(
         setPostalCode: (code) =>
           set((state) => ({
             userProfile: { ...state.userProfile, postalCode: code },
+          })),
+
+        // Erweiterter Modus
+        setIsCompanyCar: (isCompanyCar) =>
+          set((state) => ({
+            userProfile: { ...state.userProfile, isCompanyCar },
+          })),
+
+        setTaxBracket: (taxBracket) =>
+          set((state) => ({
+            userProfile: { ...state.userProfile, taxBracket },
+          })),
+
+        setLivesInCity: (livesInCity) =>
+          set((state) => ({
+            userProfile: { ...state.userProfile, livesInCity },
+          })),
+
+        setMonthlyParkingCost: (monthlyParkingCost) =>
+          set((state) => ({
+            userProfile: { ...state.userProfile, monthlyParkingCost },
+          })),
+
+        setHasEmployerCharging: (hasEmployerCharging) =>
+          set((state) => ({
+            userProfile: { ...state.userProfile, hasEmployerCharging },
+          })),
+
+        setPriceForecast: (priceForecast) =>
+          set((state) => ({
+            userProfile: { ...state.userProfile, priceForecast },
           })),
 
         // Calculation

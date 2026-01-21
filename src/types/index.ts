@@ -5,6 +5,7 @@
 export type DriveType = 'ev' | 'ice' | 'hybrid' | 'phev';
 export type FuelType = 'benzin' | 'diesel' | 'strom' | 'hybrid';
 export type VehicleClass = 'kleinwagen' | 'kompakt' | 'mittelklasse' | 'suv' | 'limousine' | 'kombi';
+export type PriceForecast = 'conservative' | 'moderate' | 'aggressive';
 
 export interface Vehicle {
   id: string;
@@ -114,6 +115,14 @@ export interface UserProfile {
   wallboxCost: number;
   hasSolarPanels: boolean;
   solarSelfConsumptionRate: number;   // 0-1
+
+  // Erweiterter Modus
+  isCompanyCar: boolean;              // Firmenwagen?
+  taxBracket: number;                 // Steuersatz 0.25-0.45
+  livesInCity: boolean;               // Großstadt mit Parkvorteilen?
+  monthlyParkingCost: number;         // €/Monat Parkkosten
+  hasEmployerCharging: boolean;       // Laden beim Arbeitgeber möglich?
+  priceForecast: PriceForecast;       // Preisentwicklung-Szenario
 }
 
 export interface ChargingScenario {

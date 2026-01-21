@@ -10,7 +10,7 @@ import {
   TCOResult,
   YearlyCosts,
 } from '@/types';
-import { COST_FACTORS, CO2_EQUIVALENTS, DEFAULT_ENERGY_PRICES } from '@/data/defaults';
+import { COST_FACTORS, CO2_EQUIVALENTS, DEFAULT_ENERGY_PRICES, PRICE_FORECASTS } from '@/data/defaults';
 
 // ============================================
 // ENERGIEKOSTEN-BERECHNUNG
@@ -21,17 +21,23 @@ import { COST_FACTORS, CO2_EQUIVALENTS, DEFAULT_ENERGY_PRICES } from '@/data/def
  */
 export const calculateEVEnergyCost = (
   vehicle: Vehicle,
-  profile: UserProfile
+  profile: UserProfile,
+  electricityPrice?: number // Optional: für Preisprognosen
 ): number => {
   if (!vehicle.evSpecs) return 0;
 
   const annualKWh = (vehicle.consumption.combined / 100) * profile.annualMileage;
-  
+  const baseElectricityPrice = electricityPrice ?? profile.homeChargingPrice;
+
   // Gewichteter Durchschnittspreis basierend auf Ladeszenarien
   const { chargingScenario } = profile;
+
+  // Arbeitgeber-Laden: Wenn verfügbar, ist Work-Charging kostenlos!
+  const workChargingPrice = profile.hasEmployerCharging ? 0 : baseElectricityPrice * 0.8;
+
   const weightedPrice =
-    chargingScenario.homeCharging * profile.homeChargingPrice +
-    chargingScenario.workCharging * profile.homeChargingPrice * 0.8 + // Arbeitgeber oft günstiger
+    chargingScenario.homeCharging * baseElectricityPrice +
+    chargingScenario.workCharging * workChargingPrice +
     chargingScenario.publicACCharging * profile.publicChargingPrice +
     chargingScenario.publicDCCharging * DEFAULT_ENERGY_PRICES.electricity.publicDC;
 
@@ -50,12 +56,61 @@ export const calculateEVEnergyCost = (
  */
 export const calculateICEFuelCost = (
   vehicle: Vehicle,
-  profile: UserProfile
+  profile: UserProfile,
+  fuelPrice?: number // Optional: für Preisprognosen
 ): number => {
   if (!vehicle.iceSpecs) return 0;
 
   const annualLiters = (vehicle.consumption.combined / 100) * profile.annualMileage;
-  return annualLiters * profile.fuelPrice;
+  const price = fuelPrice ?? profile.fuelPrice;
+  return annualLiters * price;
+};
+
+// ============================================
+// FIRMENWAGEN-STEUER
+// ============================================
+
+/**
+ * Berechnet den geldwerten Vorteil / Dienstwagen-Steuer
+ * E-Auto: 0.25% vom Listenpreis pro Monat
+ * Verbrenner: 1% vom Listenpreis pro Monat
+ */
+export const calculateCompanyCarTax = (
+  vehicle: Vehicle,
+  profile: UserProfile
+): { monthlyBenefit: number; annualTaxCost: number } => {
+  if (!profile.isCompanyCar) {
+    return { monthlyBenefit: 0, annualTaxCost: 0 };
+  }
+
+  // Geldwerter Vorteil pro Monat
+  const benefitRate = vehicle.driveType === 'ev' ? 0.0025 : 0.01;
+  const monthlyBenefit = vehicle.basePrice * benefitRate;
+
+  // Steuerliche Belastung (muss versteuert werden)
+  const annualTaxCost = monthlyBenefit * 12 * profile.taxBracket;
+
+  return { monthlyBenefit, annualTaxCost };
+};
+
+// ============================================
+// PARKGEBÜHREN-ERSPARNIS
+// ============================================
+
+/**
+ * Berechnet die Parkgebühren-Ersparnis für E-Autos in Großstädten
+ * E-Autos parken oft kostenlos oder 50% günstiger
+ */
+export const calculateParkingSavings = (
+  vehicle: Vehicle,
+  profile: UserProfile
+): number => {
+  if (!profile.livesInCity || vehicle.driveType !== 'ev') {
+    return 0;
+  }
+
+  // E-Autos: 50% Rabatt auf Parkgebühren
+  return profile.monthlyParkingCost * 0.5 * 12;
 };
 
 // ============================================
@@ -311,6 +366,9 @@ export const calculateVibeAboTCO = (
   const totalKm = profile.annualMileage * profile.holdingPeriodYears;
   const monthlyKm = profile.annualMileage / 12;
 
+  // Preisprognose holen
+  const forecast = PRICE_FORECASTS[profile.priceForecast];
+
   // Startgebühr
   const startFee = vibeAbo.startFee;
 
@@ -322,25 +380,54 @@ export const calculateVibeAboTCO = (
   const excessKm = Math.max(0, totalKm - includedKmTotal);
   const excessKmCost = excessKm * vibeAbo.excessKmRate;
 
-  // Energiekosten (Strom zahlt der Kunde selbst)
-  const totalEnergyCost = calculateEVEnergyCost(vehicle, profile) * profile.holdingPeriodYears;
+  // Energiekosten mit Preisprognose (Jahr für Jahr berechnen)
+  let totalEnergyCost = 0;
+  let currentElectricityPrice = profile.homeChargingPrice;
+  for (let year = 1; year <= profile.holdingPeriodYears; year++) {
+    totalEnergyCost += calculateEVEnergyCost(vehicle, profile, currentElectricityPrice);
+    currentElectricityPrice *= (1 + forecast.electricityGrowth);
+  }
 
   // Wallbox (optional, wenn gewünscht)
   const wallboxCost = profile.hasWallbox ? profile.wallboxCost : 0;
 
+  // Firmenwagen-Steuer (EV: nur 0.25% Versteuerung)
+  const companyCarTax = calculateCompanyCarTax(vehicle, profile);
+  const totalCompanyCarTax = companyCarTax.annualTaxCost * profile.holdingPeriodYears;
+
+  // Parkgebühren-Ersparnis (wird als negativer Wert abgezogen)
+  const annualParkingSavings = calculateParkingSavings(vehicle, profile);
+  const totalParkingSavings = annualParkingSavings * profile.holdingPeriodYears;
+
   // Gesamtkosten
-  const totalCostOfOwnership = startFee + totalMonthlyRates + excessKmCost + totalEnergyCost + wallboxCost;
+  const totalCostOfOwnership =
+    startFee +
+    totalMonthlyRates +
+    excessKmCost +
+    totalEnergyCost +
+    wallboxCost +
+    totalCompanyCarTax -
+    totalParkingSavings; // Ersparnis abziehen
 
   // Monatliche Daten für Charts
   const monthlyData: { month: number; cumulative: number }[] = [];
   let cumulative = startFee + wallboxCost;
+  let yearlyElectricityPrice = profile.homeChargingPrice;
 
   for (let m = 1; m <= months; m++) {
-    const monthlyEnergy = totalEnergyCost / months;
+    // Jährlich Strompreis anpassen
+    if (m > 1 && (m - 1) % 12 === 0) {
+      yearlyElectricityPrice *= (1 + forecast.electricityGrowth);
+    }
+
+    const monthlyEnergy = calculateEVEnergyCost(vehicle, profile, yearlyElectricityPrice) / 12;
     const monthlyExcessKm = monthlyKm > vibeAbo.includedKmPerMonth
       ? (monthlyKm - vibeAbo.includedKmPerMonth) * vibeAbo.excessKmRate
       : 0;
-    cumulative += vibeAbo.monthlyRate + monthlyEnergy + monthlyExcessKm;
+    const monthlyCompanyCarTax = companyCarTax.annualTaxCost / 12;
+    const monthlyParkingSavings = annualParkingSavings / 12;
+
+    cumulative += vibeAbo.monthlyRate + monthlyEnergy + monthlyExcessKm + monthlyCompanyCarTax - monthlyParkingSavings;
 
     monthlyData.push({
       month: m,
@@ -380,6 +467,9 @@ export const calculateIceLeasingTCO = (
   const months = profile.holdingPeriodYears * 12;
   const totalKm = profile.annualMileage * profile.holdingPeriodYears;
 
+  // Preisprognose holen
+  const forecast = PRICE_FORECASTS[profile.priceForecast];
+
   // Anzahlung
   const downPayment = leasing.downPayment;
 
@@ -391,8 +481,13 @@ export const calculateIceLeasingTCO = (
   const excessKm = Math.max(0, totalKm - includedKmTotal);
   const excessKmCost = excessKm * leasing.excessKmRate;
 
-  // Kraftstoffkosten
-  const totalFuelCost = calculateICEFuelCost(vehicle, profile) * profile.holdingPeriodYears;
+  // Kraftstoffkosten mit Preisprognose (Jahr für Jahr berechnen)
+  let totalFuelCost = 0;
+  let currentFuelPrice = profile.fuelPrice;
+  for (let year = 1; year <= profile.holdingPeriodYears; year++) {
+    totalFuelCost += calculateICEFuelCost(vehicle, profile, currentFuelPrice);
+    currentFuelPrice *= (1 + forecast.fuelGrowth);
+  }
 
   // Wartungskosten (muss der Kunde selbst zahlen beim Leasing)
   const totalMaintenanceCost = calculateMaintenanceCost(vehicle, profile) * profile.holdingPeriodYears;
@@ -407,6 +502,15 @@ export const calculateIceLeasingTCO = (
     totalTaxCost += calculateTaxCost(vehicle, currentYear);
   }
 
+  // Firmenwagen-Steuer (ICE: volle 1% Versteuerung)
+  const companyCarTax = calculateCompanyCarTax(vehicle, profile);
+  const totalCompanyCarTax = companyCarTax.annualTaxCost * profile.holdingPeriodYears;
+
+  // Parkgebühren (Verbrenner: volle Kosten in der Stadt)
+  const totalParkingCost = profile.livesInCity
+    ? profile.monthlyParkingCost * 12 * profile.holdingPeriodYears
+    : 0;
+
   // Gesamtkosten
   const totalCostOfOwnership =
     downPayment +
@@ -415,26 +519,39 @@ export const calculateIceLeasingTCO = (
     totalFuelCost +
     totalMaintenanceCost +
     totalInsuranceCost +
-    totalTaxCost;
+    totalTaxCost +
+    totalCompanyCarTax +
+    totalParkingCost;
 
   // Monatliche Daten für Charts
   const monthlyData: { month: number; cumulative: number }[] = [];
   let cumulative = downPayment;
+  let yearlyFuelPrice = profile.fuelPrice;
 
-  const monthlyFuel = totalFuelCost / months;
   const monthlyMaintenance = totalMaintenanceCost / months;
   const monthlyInsurance = totalInsuranceCost / months;
   const monthlyTax = totalTaxCost / months;
   const monthlyExcessKm = excessKmCost / months;
+  const monthlyCompanyCarTax = companyCarTax.annualTaxCost / 12;
+  const monthlyParking = profile.livesInCity ? profile.monthlyParkingCost : 0;
 
   for (let m = 1; m <= months; m++) {
+    // Jährlich Benzinpreis anpassen
+    if (m > 1 && (m - 1) % 12 === 0) {
+      yearlyFuelPrice *= (1 + forecast.fuelGrowth);
+    }
+
+    const monthlyFuel = calculateICEFuelCost(vehicle, profile, yearlyFuelPrice) / 12;
+
     cumulative +=
       leasing.monthlyRate +
       monthlyFuel +
       monthlyMaintenance +
       monthlyInsurance +
       monthlyTax +
-      monthlyExcessKm;
+      monthlyExcessKm +
+      monthlyCompanyCarTax +
+      monthlyParking;
 
     monthlyData.push({
       month: m,
