@@ -127,8 +127,8 @@ export const Slider: React.FC<SliderProps> = ({
     <div className={cn('w-full', className)}>
       {label && (
         <div className="flex justify-between items-center mb-3">
-          <label className="text-sm font-medium text-vibe-gray-600">{label}</label>
-          <span className="text-lg font-semibold text-vibe-secondary font-mono">
+          <label className="text-sm font-medium text-white/70">{label}</label>
+          <span className="text-lg font-bold text-purple-300 font-mono">
             {formatValue(value)}
           </span>
         </div>
@@ -141,28 +141,29 @@ export const Slider: React.FC<SliderProps> = ({
           step={step}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="w-full h-2 bg-vibe-gray-200 rounded-full appearance-none cursor-pointer
+          className="w-full h-2 bg-white/20 rounded-full appearance-none cursor-pointer
                      [&::-webkit-slider-thumb]:appearance-none
                      [&::-webkit-slider-thumb]:w-5
                      [&::-webkit-slider-thumb]:h-5
                      [&::-webkit-slider-thumb]:rounded-full
-                     [&::-webkit-slider-thumb]:bg-vibe-primary
-                     [&::-webkit-slider-thumb]:shadow-vibe
+                     [&::-webkit-slider-thumb]:bg-purple-400
+                     [&::-webkit-slider-thumb]:shadow-lg
+                     [&::-webkit-slider-thumb]:shadow-purple-500/30
                      [&::-webkit-slider-thumb]:cursor-pointer
                      [&::-webkit-slider-thumb]:transition-transform
                      [&::-webkit-slider-thumb]:hover:scale-110
                      [&::-moz-range-thumb]:w-5
                      [&::-moz-range-thumb]:h-5
                      [&::-moz-range-thumb]:rounded-full
-                     [&::-moz-range-thumb]:bg-vibe-primary
+                     [&::-moz-range-thumb]:bg-purple-400
                      [&::-moz-range-thumb]:border-0
                      [&::-moz-range-thumb]:cursor-pointer"
           style={{
-            background: `linear-gradient(to right, #00D4AA ${percentage}%, #E8E8EC ${percentage}%)`,
+            background: `linear-gradient(to right, #A855F7 ${percentage}%, rgba(255,255,255,0.2) ${percentage}%)`,
           }}
         />
       </div>
-      <div className="flex justify-between mt-1 text-xs text-vibe-gray-400">
+      <div className="flex justify-between mt-1 text-xs text-white/40">
         <span>{formatValue(min)}</span>
         <span>{formatValue(max)}</span>
       </div>
@@ -252,6 +253,7 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
 interface SelectOption {
   value: string;
   label: string;
+  sublabel?: string;
 }
 
 interface SelectProps {
@@ -272,22 +274,25 @@ export const Select: React.FC<SelectProps> = ({
   return (
     <div className={cn('w-full', className)}>
       {label && (
-        <label className="block text-sm font-medium text-vibe-gray-600 mb-2">
+        <label className="block text-sm font-medium text-white/70 mb-2">
           {label}
         </label>
       )}
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-4 py-3 bg-white border border-vibe-gray-200 rounded-xl
-                   text-vibe-gray-700 font-medium
-                   focus:outline-none focus:ring-2 focus:ring-vibe-primary focus:border-transparent
+        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl
+                   text-white font-medium
+                   focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent
                    cursor-pointer transition-all duration-200
-                   hover:border-vibe-gray-300"
+                   hover:border-white/40 hover:bg-white/15"
       >
+        <option value="" disabled className="bg-slate-800 text-white">
+          Fahrzeug wählen...
+        </option>
         {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
+          <option key={option.value} value={option.value} className="bg-slate-800 text-white">
+            {option.label} {option.sublabel ? `– ${option.sublabel}` : ''}
           </option>
         ))}
       </select>
@@ -318,10 +323,10 @@ export const Toggle: React.FC<ToggleProps> = ({
     <label className={cn('flex items-center justify-between cursor-pointer', className)}>
       <div>
         {label && (
-          <span className="text-sm font-medium text-vibe-gray-700">{label}</span>
+          <span className="text-sm font-medium text-white">{label}</span>
         )}
         {description && (
-          <p className="text-xs text-vibe-gray-500 mt-0.5">{description}</p>
+          <p className="text-xs text-white/50 mt-0.5">{description}</p>
         )}
       </div>
       <button
@@ -331,7 +336,7 @@ export const Toggle: React.FC<ToggleProps> = ({
         onClick={() => onChange(!checked)}
         className={cn(
           'relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200',
-          checked ? 'bg-vibe-primary' : 'bg-vibe-gray-300'
+          checked ? 'bg-purple-500' : 'bg-white/20'
         )}
       >
         <span

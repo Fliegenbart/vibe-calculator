@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   LineChart,
   Line,
@@ -37,7 +37,7 @@ import { VIBE_ABO } from '@/data/defaults';
 import { useCalculatorStore } from '@/hooks/useCalculatorStore';
 import { Card } from '@/components/shared';
 import { generateChartData } from '@/services/calculator';
-import { formatCurrency, formatCO2, cn } from '@/utils';
+import { formatCurrency, formatCO2 } from '@/utils';
 
 // Animated number component
 const AnimatedNumber: React.FC<{
@@ -79,9 +79,6 @@ interface UspItem {
 
 export const ResultPanel: React.FC = () => {
   const { result, userProfile } = useCalculatorStore();
-  const [, setAnimationPhase] = useState(0);
-  const [visibleUsps, setVisibleUsps] = useState<number>(0);
-  const [animationKey, setAnimationKey] = useState(0);
 
   const chartData = useMemo(() => {
     if (!result) return [];
@@ -114,28 +111,10 @@ export const ResultPanel: React.FC = () => {
     ];
   }, [result, userProfile.holdingPeriodYears, userProfile.annualMileage]);
 
-  const accumulatedExtraCost = useMemo(() => {
-    return uspItems.slice(0, visibleUsps).reduce((sum, usp) => sum + usp.totalCost, 0);
-  }, [uspItems, visibleUsps]);
-
-  useEffect(() => {
-    if (result) {
-      setAnimationPhase(0);
-      setVisibleUsps(0);
-      setAnimationKey(prev => prev + 1);
-
-      const timer = setTimeout(() => {
-        setAnimationPhase(1);
-        uspItems.forEach((_, index) => {
-          setTimeout(() => {
-            setVisibleUsps(index + 1);
-          }, 400 * (index + 1));
-        });
-      }, 800);
-
-      return () => clearTimeout(timer);
-    }
-  }, [result?.vibeAbo.totalCostOfOwnership, result?.iceLeasing.totalCostOfOwnership]);
+  // Total extra costs (always show full amount)
+  const totalExtraCost = useMemo(() => {
+    return uspItems.reduce((sum, usp) => sum + usp.totalCost, 0);
+  }, [uspItems]);
 
   if (!result) {
     return (
@@ -163,16 +142,14 @@ export const ResultPanel: React.FC = () => {
   }
 
   const { vibeAbo, iceLeasing, savingsTotal, co2Savings, co2SavingsEquivalent } = result;
-  const displayIcePrice = iceLeasing.totalMonthlyRates + accumulatedExtraCost;
 
   return (
     <div className="space-y-6">
       {/* Main Comparison Card */}
       <motion.div
-        key={animationKey}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.3 }}
       >
         <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 overflow-hidden relative">
           {/* Decorative gradient */}
@@ -220,35 +197,20 @@ export const ResultPanel: React.FC = () => {
                 <Fuel className="w-4 h-4 text-orange-400" />
                 <span className="text-xs font-bold text-orange-300">Verbrenner</span>
               </div>
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.3, type: 'spring' }}
-                className="space-y-1"
-              >
+              <div className="space-y-1">
                 <p className="text-sm text-white/40 line-through">
                   {formatCurrency(iceLeasing.totalMonthlyRates)}
                 </p>
-                <AnimatePresence>
-                  {accumulatedExtraCost > 0 && (
-                    <motion.p
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="text-xs text-orange-400 font-bold"
-                    >
-                      + {formatCurrency(accumulatedExtraCost)} 😬
-                    </motion.p>
-                  )}
-                </AnimatePresence>
+                <p className="text-xs text-orange-400 font-bold">
+                  + {formatCurrency(totalExtraCost)} Nebenkosten 😬
+                </p>
                 <AnimatedNumber
-                  value={displayIcePrice}
-                  duration={800}
+                  value={iceLeasing.totalCostOfOwnership}
+                  duration={500}
                   className="text-3xl font-black text-white"
                 />
-              </motion.div>
-              <p className="text-xs text-white/50 mt-2">
-                {visibleUsps > 0 ? 'Reale Kosten 💀' : 'Nur Leasing...'}
-              </p>
+              </div>
+              <p className="text-xs text-white/50 mt-2">Reale Kosten 💀</p>
             </motion.div>
           </div>
 
@@ -261,56 +223,28 @@ export const ResultPanel: React.FC = () => {
             <div className="space-y-2">
               {uspItems.map((usp, index) => {
                 const IconComponent = usp.icon;
-                const isVisible = index < visibleUsps;
 
                 return (
                   <motion.div
                     key={usp.id}
                     initial={{ opacity: 0, x: -20 }}
-                    animate={{
-                      opacity: isVisible ? 1 : 0.3,
-                      x: isVisible ? 0 : -20,
-                    }}
-                    transition={{ duration: 0.3 }}
-                    className={cn(
-                      'flex items-center justify-between py-2.5 px-3 rounded-xl transition-all',
-                      isVisible ? 'bg-gradient-to-r from-purple-500/20 to-transparent' : 'bg-white/5'
-                    )}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.2, delay: index * 0.05 }}
+                    className="flex items-center justify-between py-2.5 px-3 rounded-xl bg-gradient-to-r from-purple-500/20 to-transparent"
                   >
                     <div className="flex items-center gap-3">
-                      <div className={cn(
-                        'w-8 h-8 rounded-lg flex items-center justify-center',
-                        isVisible ? 'bg-purple-500/30' : 'bg-white/10'
-                      )}>
-                        <IconComponent className={cn(
-                          'w-4 h-4',
-                          isVisible ? 'text-purple-300' : 'text-white/40'
-                        )} />
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-purple-500/30">
+                        <IconComponent className="w-4 h-4 text-purple-300" />
                       </div>
-                      <span className={cn(
-                        'text-sm',
-                        isVisible ? 'text-white font-medium' : 'text-white/40'
-                      )}>
+                      <span className="text-sm text-white font-medium">
                         {usp.label}
                       </span>
-                      {isVisible && (
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          transition={{ type: 'spring', stiffness: 500 }}
-                        >
-                          <Check className="w-4 h-4 text-emerald-400" />
-                        </motion.div>
-                      )}
+                      <Check className="w-4 h-4 text-emerald-400" />
                     </div>
                     {usp.totalCost > 0 && (
-                      <motion.span
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: isVisible ? 1 : 0 }}
-                        className="text-sm font-bold text-orange-400"
-                      >
+                      <span className="text-sm font-bold text-orange-400">
                         +{formatCurrency(usp.totalCost)}
-                      </motion.span>
+                      </span>
                     )}
                   </motion.div>
                 );
@@ -319,80 +253,61 @@ export const ResultPanel: React.FC = () => {
           </div>
 
           {/* Savings Reveal */}
-          <AnimatePresence>
-            {visibleUsps === uspItems.length && (
-              <motion.div
-                initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
-                className="p-6 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 rounded-2xl shadow-lg shadow-emerald-500/30 relative overflow-hidden"
-              >
-                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvc3ZnPg==')] opacity-50" />
-                <div className="flex items-center justify-between relative">
-                  <div className="flex items-center gap-3">
-                    <motion.div
-                      animate={{ rotate: [0, 15, -15, 0], scale: [1, 1.1, 1] }}
-                      transition={{ duration: 0.5, delay: 0.5 }}
-                    >
-                      <PartyPopper className="w-8 h-8 text-white" />
-                    </motion.div>
-                    <div>
-                      <p className="text-sm text-white/80 font-bold">BOOM! Du sparst:</p>
-                      <p className="text-xs text-white/60">über {userProfile.holdingPeriodYears} Jahre</p>
-                    </div>
-                  </div>
-                  <motion.span
-                    initial={{ scale: 2, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: 'spring', stiffness: 300, delay: 0.4 }}
-                    className="text-4xl font-black text-white drop-shadow-lg"
-                  >
-                    {formatCurrency(Math.abs(savingsTotal))}
-                  </motion.span>
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+            className="p-6 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 rounded-2xl shadow-lg shadow-emerald-500/30 relative overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvc3ZnPg==')] opacity-50" />
+            <div className="flex items-center justify-between relative">
+              <div className="flex items-center gap-3">
+                <PartyPopper className="w-8 h-8 text-white" />
+                <div>
+                  <p className="text-sm text-white/80 font-bold">Du sparst:</p>
+                  <p className="text-xs text-white/60">über {userProfile.holdingPeriodYears} Jahre</p>
                 </div>
-                <p className="text-sm text-white/70 mt-4 text-center">
-                  Das sind {formatCurrency(Math.round(Math.abs(savingsTotal) / userProfile.holdingPeriodYears / 12))} pro Monat mehr für Pizza 🍕
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
+              </div>
+              <span className="text-4xl font-black text-white drop-shadow-lg">
+                {formatCurrency(Math.abs(savingsTotal))}
+              </span>
+            </div>
+            <p className="text-sm text-white/70 mt-4 text-center">
+              Das sind {formatCurrency(Math.round(Math.abs(savingsTotal) / userProfile.holdingPeriodYears / 12))} pro Monat mehr für Pizza 🍕
+            </p>
+          </motion.div>
 
           {/* THG Quote Bonus */}
-          <AnimatePresence>
-            {visibleUsps === uspItems.length && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-                className="mt-4 p-4 bg-gradient-to-r from-yellow-500/20 to-orange-500/10 border border-yellow-500/30 rounded-2xl"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-yellow-500/20 rounded-xl flex items-center justify-center">
-                      <span className="text-xl">🤑</span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-yellow-300">Gratis Geld vom Staat!</p>
-                      <p className="text-xs text-white/50">THG-Quote für E-Auto Fahrer</p>
-                    </div>
-                  </div>
-                  <span className="text-xl font-black text-yellow-400">
-                    +{formatCurrency(300 * userProfile.holdingPeriodYears)}
-                  </span>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mt-4 p-4 bg-gradient-to-r from-yellow-500/20 to-orange-500/10 border border-yellow-500/30 rounded-2xl"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-yellow-500/20 rounded-xl flex items-center justify-center">
+                  <span className="text-xl">🤑</span>
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                <div>
+                  <p className="text-sm font-bold text-yellow-300">Gratis Geld vom Staat!</p>
+                  <p className="text-xs text-white/50">THG-Quote für E-Auto Fahrer</p>
+                </div>
+              </div>
+              <span className="text-xl font-black text-yellow-400">
+                +{formatCurrency(300 * userProfile.holdingPeriodYears)}
+              </span>
+            </div>
+          </motion.div>
 
           {/* Active Advanced Features */}
-          <AnimatePresence>
-            {visibleUsps === uspItems.length && (userProfile.isCompanyCar || userProfile.livesInCity || userProfile.hasEmployerCharging || userProfile.priceForecast !== 'moderate') && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8 }}
-                className="mt-4 space-y-2"
-              >
+          {(userProfile.isCompanyCar || userProfile.livesInCity || userProfile.hasEmployerCharging || userProfile.priceForecast !== 'moderate') && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="mt-4 space-y-2"
+            >
                 <p className="text-xs text-white/50 font-medium">🔮 Erweiterte Berechnung aktiv:</p>
                 <div className="flex flex-wrap gap-2">
                   {userProfile.isCompanyCar && (
@@ -443,7 +358,6 @@ export const ResultPanel: React.FC = () => {
                 </div>
               </motion.div>
             )}
-          </AnimatePresence>
         </Card>
       </motion.div>
 
