@@ -4,6 +4,7 @@ import { Sparkles } from 'lucide-react';
 import { InputPanel } from './InputPanel';
 import { ResultPanel } from './ResultPanel';
 import { useCalculatorStore } from '@/hooks/useCalculatorStore';
+import { electricVehicles, iceVehicles } from '@/data/vehicles';
 
 // Confetti component for Easter Egg
 const Confetti: React.FC<{ show: boolean }> = ({ show }) => {
@@ -72,11 +73,21 @@ const FloatingEmojis: React.FC = () => {
 };
 
 export const Dashboard: React.FC = () => {
-  const { userProfile, calculate, result } = useCalculatorStore();
+  const { userProfile, calculate, result, setEVVehicle, setICEVehicle } = useCalculatorStore();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [logoClicks, setLogoClicks] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
   const [easterEggMessage, setEasterEggMessage] = useState<string | null>(null);
+
+  // Auto-select first vehicles on mount if none selected
+  useEffect(() => {
+    if (!userProfile.evVehicle && electricVehicles.length > 0) {
+      setEVVehicle(electricVehicles[0]);
+    }
+    if (!userProfile.iceVehicle && iceVehicles.length > 0) {
+      setICEVehicle(iceVehicles[0]);
+    }
+  }, []);
 
   // Easter Egg: Click logo 5 times
   const handleLogoClick = () => {
@@ -160,26 +171,26 @@ export const Dashboard: React.FC = () => {
 
       {/* Header */}
       <header className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-xl border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-5">
           <div className="flex items-center justify-between">
             <motion.div
-              className="flex items-center gap-3 cursor-pointer select-none"
+              className="flex items-center gap-4 cursor-pointer select-none"
               onClick={handleLogoClick}
               whileHover={{ scale: 1.05, rotate: -2 }}
               whileTap={{ scale: 0.95 }}
             >
               <motion.div
-                className="w-12 h-12 bg-gradient-to-br from-yellow-400 via-pink-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/30"
+                className="w-14 h-14 bg-gradient-to-br from-yellow-400 via-pink-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/30"
                 animate={{ rotate: [0, 5, -5, 0] }}
                 transition={{ duration: 4, repeat: Infinity }}
               >
-                <span className="text-2xl">⚡</span>
+                <span className="text-3xl">⚡</span>
               </motion.div>
               <div className="hidden sm:block">
-                <span className="font-black text-xl bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-400 bg-clip-text text-transparent">
+                <span className="font-black text-2xl bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-400 bg-clip-text text-transparent">
                   VIBE Check
                 </span>
-                <p className="text-xs text-white/50">Benzin ist so 2010 💅</p>
+                <p className="text-sm text-white/50">Benzin ist so 2010 💅</p>
               </div>
             </motion.div>
 
@@ -187,17 +198,17 @@ export const Dashboard: React.FC = () => {
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-emerald-500/20 to-green-500/20 border border-emerald-500/30 rounded-2xl"
+                className="flex items-center gap-4 px-6 py-4 bg-gradient-to-r from-emerald-500/20 to-green-500/20 border border-emerald-500/30 rounded-2xl"
               >
                 <motion.div
                   animate={{ scale: [1, 1.2, 1] }}
                   transition={{ duration: 2, repeat: Infinity }}
                 >
-                  <Sparkles className="w-5 h-5 text-emerald-400" />
+                  <Sparkles className="w-6 h-6 text-emerald-400" />
                 </motion.div>
                 <div className="text-right">
-                  <p className="text-[10px] text-emerald-400/70 uppercase tracking-wider font-bold">Du sparst</p>
-                  <p className="font-black text-2xl text-emerald-400">
+                  <p className="text-xs text-emerald-400/70 uppercase tracking-wider font-bold">Du sparst</p>
+                  <p className="font-black text-3xl text-emerald-400">
                     {Math.round(Math.abs(result.savingsTotal)).toLocaleString('de-DE')} €
                   </p>
                 </div>
@@ -208,8 +219,8 @@ export const Dashboard: React.FC = () => {
       </header>
 
       {/* Main Content - Side by Side */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <main className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
           {/* Left: Input Panel */}
           <div className="space-y-6">
             <motion.div
@@ -228,7 +239,7 @@ export const Dashboard: React.FC = () => {
           </div>
 
           {/* Right: Result Panel - Sticky on Desktop */}
-          <div className="lg:sticky lg:top-28 lg:self-start">
+          <div className="lg:sticky lg:top-32 lg:self-start">
             <motion.div
               className="mb-6"
               initial={{ opacity: 0, y: 20 }}
@@ -248,7 +259,7 @@ export const Dashboard: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="mt-16 py-8 px-6 border-t border-white/10 bg-black/20">
+      <footer className="mt-16 py-10 px-6 sm:px-8 lg:px-12 border-t border-white/10 bg-black/20">
         <div className="max-w-7xl mx-auto text-center">
           <motion.p
             className="text-white/30 text-sm mb-2"
