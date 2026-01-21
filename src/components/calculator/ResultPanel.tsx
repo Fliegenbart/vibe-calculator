@@ -26,6 +26,9 @@ import {
   Car,
   FileText,
   CircleDollarSign,
+  Settings,
+  ClipboardList,
+  LifeBuoy,
 } from 'lucide-react';
 import { VIBE_ABO } from '@/data/defaults';
 import { useCalculatorStore } from '@/hooks/useCalculatorStore';
@@ -73,6 +76,9 @@ const uspItems = [
   { id: 'maintenance', label: 'Wartung & Service', icon: Wrench, costPerYear: 450 },
   { id: 'tires', label: 'Reifen & Wechsel', icon: Car, costPerYear: 250 },
   { id: 'tuv', label: 'TÜV / HU', icon: FileText, costPerYear: 75 },
+  { id: 'wear', label: 'Verschleißreparaturen', icon: Settings, costPerYear: 300 },
+  { id: 'registration', label: 'Zulassung & Anmeldung', icon: ClipboardList, costPerYear: 16 },
+  { id: 'roadside', label: 'Pannenhilfe', icon: LifeBuoy, costPerYear: 100 },
   { id: 'km', label: '15.000 km inklusive', icon: CircleDollarSign, costPerYear: 0 },
 ];
 
@@ -318,6 +324,31 @@ export const ResultPanel: React.FC = () => {
                     {formatCurrency(Math.abs(savingsTotal))}
                   </motion.span>
                 </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* THG-Quote Bonus */}
+          <AnimatePresence>
+            {visibleUsps === uspItems.length && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6, type: 'spring' }}
+                className="mt-3 p-3 bg-green-50 border border-green-200 rounded-xl"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Leaf className="w-4 h-4 text-green-600" />
+                    <span className="text-sm text-green-700">THG-Quote Bonus (E-Auto)</span>
+                  </div>
+                  <span className="text-lg font-bold text-green-600">
+                    +{formatCurrency(300 * userProfile.holdingPeriodYears)}
+                  </span>
+                </div>
+                <p className="text-[10px] text-green-600 mt-1">
+                  Jährliche Einnahme durch CO₂-Zertifikate
+                </p>
               </motion.div>
             )}
           </AnimatePresence>
