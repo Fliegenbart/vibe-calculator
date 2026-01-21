@@ -79,7 +79,7 @@ export const Dashboard: React.FC = () => {
   const [showConfetti, setShowConfetti] = useState(false);
   const [easterEggMessage, setEasterEggMessage] = useState<string | null>(null);
 
-  // Auto-select first vehicles on mount if none selected
+  // Auto-select first vehicles on mount if none selected, then calculate immediately
   useEffect(() => {
     if (!userProfile.evVehicle && electricVehicles.length > 0) {
       setEVVehicle(electricVehicles[0]);
@@ -87,6 +87,12 @@ export const Dashboard: React.FC = () => {
     if (!userProfile.iceVehicle && iceVehicles.length > 0) {
       setICEVehicle(iceVehicles[0]);
     }
+
+    // Calculate immediately on mount (no debounce for initial load)
+    // Small timeout to ensure state updates have propagated
+    setTimeout(() => {
+      calculate();
+    }, 50);
   }, []);
 
   // Easter Egg: Click logo 5 times
@@ -114,7 +120,7 @@ export const Dashboard: React.FC = () => {
       if (userProfile.evVehicle && userProfile.iceVehicle) {
         calculate();
       }
-    }, 300);
+    }, 100);
   }, [userProfile, calculate]);
 
   useEffect(() => {
