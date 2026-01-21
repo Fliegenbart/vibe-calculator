@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LineChart,
@@ -17,14 +17,15 @@ import {
   TreePine,
   Repeat,
   Check,
-  X,
   Star,
-  TrendingDown,
   AlertCircle,
   Shield,
   Wrench,
   Calendar,
   Zap,
+  Car,
+  FileText,
+  CircleDollarSign,
 } from 'lucide-react';
 import { VIBE_ABO } from '@/data/defaults';
 import { useCalculatorStore } from '@/hooks/useCalculatorStore';
@@ -32,13 +33,97 @@ import { Card } from '@/components/shared';
 import { generateChartData } from '@/services/calculator';
 import { formatCurrency, formatCO2, cn } from '@/utils';
 
+// Animated number component
+const AnimatedNumber: React.FC<{
+  value: number;
+  duration?: number;
+  className?: string;
+}> = ({ value, duration = 1500, className }) => {
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    const startTime = Date.now();
+    const startValue = displayValue;
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // Easing function (ease-out)
+      const eased = 1 - Math.pow(1 - progress, 3);
+
+      const current = Math.round(startValue + (value - startValue) * eased);
+      setDisplayValue(current);
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+
+    requestAnimationFrame(animate);
+  }, [value, duration]);
+
+  return <span className={className}>{formatCurrency(displayValue)}</span>;
+};
+
+// USP items with estimated costs (per year)
+const uspItems = [
+  { id: 'insurance', label: 'Versicherung', icon: Shield, costPerYear: 900 },
+  { id: 'tax', label: 'Kfz-Steuer', icon: FileText, costPerYear: 200 },
+  { id: 'maintenance', label: 'Wartung & Service', icon: Wrench, costPerYear: 450 },
+  { id: 'tires', label: 'Reifen & Wechsel', icon: Car, costPerYear: 250 },
+  { id: 'tuv', label: 'TÜV / HU', icon: FileText, costPerYear: 75 },
+  { id: 'km', label: '15.000 km inklusive', icon: CircleDollarSign, costPerYear: 0 },
+];
+
 export const ResultPanel: React.FC = () => {
   const { result, userProfile } = useCalculatorStore();
+  const [, setAnimationPhase] = useState(0);
+  const [visibleUsps, setVisibleUsps] = useState<number>(0);
+  const [animationKey, setAnimationKey] = useState(0);
 
   const chartData = useMemo(() => {
     if (!result) return [];
     return generateChartData(result).filter((_, i) => i % 6 === 0 || i === 0);
   }, [result]);
+
+  // Calculate extra costs for each USP
+  const extraCosts = useMemo(() => {
+    if (!result) return [];
+    const years = userProfile.holdingPeriodYears;
+    return uspItems.map(usp => ({
+      ...usp,
+      totalCost: usp.costPerYear * years,
+    }));
+  }, [result, userProfile.holdingPeriodYears]);
+
+  // Accumulated extra cost based on visible USPs
+  const accumulatedExtraCost = useMemo(() => {
+    return extraCosts.slice(0, visibleUsps).reduce((sum, usp) => sum + usp.totalCost, 0);
+  }, [extraCosts, visibleUsps]);
+
+  // Reset and start animation when result changes
+  useEffect(() => {
+    if (result) {
+      setAnimationPhase(0);
+      setVisibleUsps(0);
+      setAnimationKey(prev => prev + 1);
+
+      // Start USP animation sequence
+      const timer = setTimeout(() => {
+        setAnimationPhase(1);
+
+        // Reveal USPs one by one
+        uspItems.forEach((_, index) => {
+          setTimeout(() => {
+            setVisibleUsps(index + 1);
+          }, 400 * (index + 1));
+        });
+      }, 800);
+
+      return () => clearTimeout(timer);
+    }
+  }, [result?.vibeAbo.totalCostOfOwnership, result?.iceLeasing.totalCostOfOwnership]);
 
   if (!result) {
     return (
@@ -52,83 +137,184 @@ export const ResultPanel: React.FC = () => {
     );
   }
 
-  const { vibeAbo, iceLeasing, savingsTotal, savingsPerMonth, co2Savings, co2SavingsEquivalent, recommendation } = result;
-  const isVibeAboBetter = recommendation === 'vibeAbo';
+  const { vibeAbo, iceLeasing, savingsTotal, co2Savings, co2SavingsEquivalent } = result;
+
+  // Display price for ICE that grows with USPs
+  const displayIcePrice = iceLeasing.totalMonthlyRates + accumulatedExtraCost;
 
   return (
     <div className="space-y-4 lg:sticky lg:top-4">
-      {/* Hero Savings */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={`hero-${savingsTotal}`}
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          transition={{ duration: 0.3 }}
-        >
-          <Card
-            variant="gradient"
-            padding="md"
-            className={cn(
-              'border-2',
-              isVibeAboBetter
-                ? 'border-abo-purple/50 bg-gradient-to-br from-abo-purple/5 to-abo-light'
-                : 'border-ice-orange/50 bg-gradient-to-br from-ice-orange/5 to-orange-50'
-            )}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                {isVibeAboBetter ? (
-                  <div className="flex items-center gap-2 mb-2">
-                    <Star className="w-4 h-4 text-abo-purple fill-current" />
-                    <span className="text-sm font-semibold text-abo-purple">VIBE Autoabo spart!</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 mb-2">
-                    <TrendingDown className="w-4 h-4 text-ice-orange" />
-                    <span className="text-sm font-semibold text-ice-orange">Verbrenner günstiger</span>
-                  </div>
-                )}
-                <h2 className={cn(
-                  "text-3xl font-bold font-display",
-                  isVibeAboBetter ? "text-abo-purple" : "text-ice-orange"
-                )}>
-                  {formatCurrency(Math.abs(savingsTotal))}
-                </h2>
-                <p className="text-sm text-vibe-gray-500">
-                  Ersparnis über {userProfile.holdingPeriodYears} Jahre
-                </p>
+      {/* Animated Price Comparison */}
+      <motion.div
+        key={animationKey}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Card variant="bordered" padding="md" className="overflow-hidden">
+          <div className="grid grid-cols-2 gap-4">
+            {/* VIBE Price */}
+            <div className="text-center p-4 bg-abo-purple/5 rounded-xl border-2 border-abo-purple/30">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Repeat className="w-4 h-4 text-abo-purple" />
+                <span className="text-xs font-semibold text-abo-purple">VIBE Autoabo</span>
               </div>
-              <div className={cn(
-                "p-3 rounded-full",
-                isVibeAboBetter ? "bg-abo-purple/10" : "bg-ice-orange/10"
-              )}>
-                {isVibeAboBetter ? (
-                  <Repeat className="w-8 h-8 text-abo-purple" />
-                ) : (
-                  <Fuel className="w-8 h-8 text-ice-orange" />
-                )}
-              </div>
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.3, type: 'spring' }}
+              >
+                <AnimatedNumber
+                  value={vibeAbo.totalCostOfOwnership}
+                  className="text-2xl font-bold text-abo-purple"
+                />
+              </motion.div>
+              <p className="text-[10px] text-vibe-gray-500 mt-1">Alles inklusive</p>
             </div>
 
-            <div className="mt-4 pt-3 border-t border-vibe-gray-200/50 flex justify-between text-sm">
-              <span className="text-vibe-gray-500">Pro Monat:</span>
-              <span className={cn(
-                "font-semibold",
-                isVibeAboBetter ? "text-abo-purple" : "text-ice-orange"
-              )}>
-                {formatCurrency(Math.abs(savingsPerMonth))}
-              </span>
+            {/* ICE Price - grows with USPs */}
+            <div className="text-center p-4 bg-ice-orange/5 rounded-xl border-2 border-ice-orange/30">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Fuel className="w-4 h-4 text-ice-orange" />
+                <span className="text-xs font-semibold text-ice-orange">Verbrenner-Leasing</span>
+              </div>
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.3, type: 'spring' }}
+              >
+                <AnimatedNumber
+                  value={displayIcePrice}
+                  duration={800}
+                  className="text-2xl font-bold text-ice-orange"
+                />
+              </motion.div>
+              <motion.p
+                className="text-[10px] text-ice-orange mt-1"
+                animate={{ opacity: visibleUsps > 0 ? 1 : 0.5 }}
+              >
+                {visibleUsps > 0 ? `+ ${visibleUsps} Extra-Kosten` : 'Nur Leasing-Rate'}
+              </motion.p>
             </div>
-          </Card>
-        </motion.div>
-      </AnimatePresence>
+          </div>
+
+          {/* USP Animation */}
+          <div className="mt-4 pt-4 border-t border-vibe-gray-100">
+            <p className="text-xs font-semibold text-vibe-gray-500 mb-3">
+              Bei VIBE inklusive – beim Leasing extra:
+            </p>
+            <div className="space-y-2">
+              {uspItems.map((usp, index) => {
+                const IconComponent = usp.icon;
+                const isVisible = index < visibleUsps;
+                const totalCost = extraCosts[index]?.totalCost || 0;
+
+                return (
+                  <motion.div
+                    key={usp.id}
+                    initial={{ opacity: 0, x: -20, height: 0 }}
+                    animate={{
+                      opacity: isVisible ? 1 : 0.3,
+                      x: isVisible ? 0 : -20,
+                      height: 'auto',
+                    }}
+                    transition={{ duration: 0.3, delay: isVisible ? 0 : 0 }}
+                    className="flex items-center justify-between py-1.5 px-2 rounded-lg"
+                    style={{
+                      backgroundColor: isVisible ? 'rgba(99, 102, 241, 0.05)' : 'transparent',
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: isVisible ? 1 : 0.5 }}
+                        transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                        className={cn(
+                          'p-1 rounded',
+                          isVisible ? 'bg-abo-purple/10' : 'bg-vibe-gray-100'
+                        )}
+                      >
+                        <IconComponent className={cn(
+                          'w-3 h-3',
+                          isVisible ? 'text-abo-purple' : 'text-vibe-gray-400'
+                        )} />
+                      </motion.div>
+                      <span className={cn(
+                        'text-xs',
+                        isVisible ? 'text-vibe-gray-700 font-medium' : 'text-vibe-gray-400'
+                      )}>
+                        {usp.label}
+                      </span>
+                      {isVisible && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="ml-1"
+                        >
+                          <Check className="w-3 h-3 text-abo-purple" />
+                        </motion.div>
+                      )}
+                    </div>
+                    {totalCost > 0 && (
+                      <motion.span
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{
+                          opacity: isVisible ? 1 : 0,
+                          scale: isVisible ? 1 : 0.8,
+                        }}
+                        className="text-xs font-semibold text-ice-orange"
+                      >
+                        +{formatCurrency(totalCost)}
+                      </motion.span>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Total Savings */}
+          <AnimatePresence>
+            {visibleUsps === uspItems.length && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, type: 'spring' }}
+                className="mt-4 p-3 bg-gradient-to-r from-abo-purple/10 to-ev-green/10 rounded-xl border border-abo-purple/20"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Star className="w-5 h-5 text-abo-purple fill-current" />
+                    <span className="text-sm font-semibold text-vibe-gray-700">
+                      Du sparst mit VIBE:
+                    </span>
+                  </div>
+                  <motion.span
+                    initial={{ scale: 1.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', stiffness: 300 }}
+                    className="text-xl font-bold text-abo-purple"
+                  >
+                    {formatCurrency(Math.abs(savingsTotal))}
+                  </motion.span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </Card>
+      </motion.div>
 
       {/* VIBE Value Propositions */}
       <Card variant="bordered" padding="sm" className="bg-gradient-to-r from-abo-purple/5 to-transparent">
         <div className="grid grid-cols-2 gap-2">
-          {VIBE_ABO.benefits.map((benefit) => (
-            <div key={benefit.id} className="flex items-start gap-2 p-2">
+          {VIBE_ABO.benefits.map((benefit, index) => (
+            <motion.div
+              key={benefit.id}
+              className="flex items-start gap-2 p-2"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 * index }}
+            >
               <div className="p-1 rounded bg-abo-purple/10 shrink-0">
                 {benefit.id === 'flex' && <Calendar className="w-3 h-3 text-abo-purple" />}
                 {benefit.id === 'cost' && <Zap className="w-3 h-3 text-abo-purple" />}
@@ -139,190 +325,9 @@ export const ResultPanel: React.FC = () => {
                 <p className="text-xs font-semibold text-vibe-gray-700">{benefit.label}</p>
                 <p className="text-[10px] text-vibe-gray-500 leading-tight">{benefit.description}</p>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
-      </Card>
-
-      {/* Compact Comparison */}
-      <div className="grid grid-cols-2 gap-3">
-        {/* VIBE Card */}
-        <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card
-            variant="bordered"
-            padding="sm"
-            className={cn(
-              'border-l-4 border-abo-purple',
-              isVibeAboBetter && 'ring-2 ring-abo-purple/20'
-            )}
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <Repeat className="w-4 h-4 text-abo-purple" />
-              <span className="text-xs font-medium text-vibe-gray-500">VIBE Abo</span>
-            </div>
-            <p className="text-lg font-bold text-abo-purple">
-              {formatCurrency(vibeAbo.totalCostOfOwnership)}
-            </p>
-            <p className="text-xs text-vibe-gray-400 mt-1">
-              {formatCurrency(vibeAbo.costPerMonth)}/Monat
-            </p>
-            {isVibeAboBetter && (
-              <div className="mt-2 flex items-center gap-1 text-xs text-abo-purple">
-                <Check className="w-3 h-3" />
-                <span>Empfohlen</span>
-              </div>
-            )}
-          </Card>
-        </motion.div>
-
-        {/* ICE Leasing Card */}
-        <motion.div
-          initial={{ opacity: 0, x: 10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card
-            variant="bordered"
-            padding="sm"
-            className={cn(
-              'border-l-4 border-ice-orange',
-              !isVibeAboBetter && 'ring-2 ring-ice-orange/20'
-            )}
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <Fuel className="w-4 h-4 text-ice-orange" />
-              <span className="text-xs font-medium text-vibe-gray-500">Leasing</span>
-            </div>
-            <p className="text-lg font-bold text-ice-orange">
-              {formatCurrency(iceLeasing.totalCostOfOwnership)}
-            </p>
-            <p className="text-xs text-vibe-gray-400 mt-1">
-              {formatCurrency(iceLeasing.costPerMonth)}/Monat
-            </p>
-            {!isVibeAboBetter && (
-              <div className="mt-2 flex items-center gap-1 text-xs text-ice-orange">
-                <Check className="w-3 h-3" />
-                <span>Günstiger</span>
-              </div>
-            )}
-          </Card>
-        </motion.div>
-      </div>
-
-      {/* Leistungsvergleich - Was ist inklusive? */}
-      <Card variant="bordered" padding="sm">
-        <h4 className="text-sm font-semibold text-vibe-gray-700 mb-3">Was ist inklusive?</h4>
-        <div className="space-y-2">
-          {VIBE_ABO.leasingComparison.map((item, i) => (
-            <div key={i} className="flex items-center justify-between py-1.5 border-b border-vibe-gray-100 last:border-0">
-              <span className="text-xs text-vibe-gray-600 flex-1">{item.item}</span>
-              <div className="flex gap-4 shrink-0">
-                <div className="w-16 flex justify-center">
-                  {item.vibeIncluded ? (
-                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-abo-purple/10">
-                      <Check className="w-3 h-3 text-abo-purple" />
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-vibe-gray-100">
-                      <X className="w-3 h-3 text-vibe-gray-400" />
-                    </span>
-                  )}
-                </div>
-                <div className="w-16 flex justify-center">
-                  {item.leasingIncluded ? (
-                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-ev-green/10">
-                      <Check className="w-3 h-3 text-ev-green" />
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-ice-orange/10">
-                      <X className="w-3 h-3 text-ice-orange" />
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-end gap-4 mt-2 pt-2 border-t border-vibe-gray-200">
-          <span className="text-[10px] text-abo-purple font-medium w-16 text-center">VIBE</span>
-          <span className="text-[10px] text-ice-orange font-medium w-16 text-center">Leasing</span>
-        </div>
-      </Card>
-
-      {/* Cost Details Accordion */}
-      <Card variant="bordered" padding="sm">
-        <details className="group">
-          <summary className="flex justify-between items-center cursor-pointer list-none py-2">
-            <span className="text-sm font-medium text-vibe-gray-600">Kostendetails anzeigen</span>
-            <svg className="w-4 h-4 text-vibe-gray-400 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </summary>
-          <div className="pt-3 space-y-4">
-            {/* VIBE Details */}
-            <div>
-              <h4 className="text-xs font-semibold text-abo-purple mb-2">VIBE Autoabo</h4>
-              <div className="space-y-1 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-vibe-gray-500">Startgebühr</span>
-                  <span>{formatCurrency(vibeAbo.startFee)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-vibe-gray-500">Abo-Raten ({userProfile.holdingPeriodYears * 12} Mon.)</span>
-                  <span>{formatCurrency(vibeAbo.totalMonthlyRates)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-vibe-gray-500">Stromkosten</span>
-                  <span>{formatCurrency(vibeAbo.totalEnergyCost)}</span>
-                </div>
-                {vibeAbo.excessKmCost > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-vibe-gray-500">Mehrkilometer</span>
-                    <span>{formatCurrency(vibeAbo.excessKmCost)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between pt-2 border-t border-vibe-gray-100 font-semibold">
-                  <span className="text-abo-purple">Gesamt</span>
-                  <span className="text-abo-purple">{formatCurrency(vibeAbo.totalCostOfOwnership)}</span>
-                </div>
-              </div>
-            </div>
-            {/* ICE Details */}
-            <div className="pt-3 border-t border-vibe-gray-100">
-              <h4 className="text-xs font-semibold text-ice-orange mb-2">Verbrenner-Leasing</h4>
-              <div className="space-y-1 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-vibe-gray-500">Leasing-Raten ({userProfile.holdingPeriodYears * 12} Mon.)</span>
-                  <span>{formatCurrency(iceLeasing.totalMonthlyRates)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-vibe-gray-500">Kraftstoff</span>
-                  <span>{formatCurrency(iceLeasing.totalFuelCost)}</span>
-                </div>
-                <div className="flex justify-between text-ice-orange">
-                  <span>+ Wartung (extra)</span>
-                  <span>{formatCurrency(iceLeasing.totalMaintenanceCost)}</span>
-                </div>
-                <div className="flex justify-between text-ice-orange">
-                  <span>+ Versicherung (extra)</span>
-                  <span>{formatCurrency(iceLeasing.totalInsuranceCost)}</span>
-                </div>
-                <div className="flex justify-between text-ice-orange">
-                  <span>+ Kfz-Steuer (extra)</span>
-                  <span>{formatCurrency(iceLeasing.totalTaxCost)}</span>
-                </div>
-                <div className="flex justify-between pt-2 border-t border-vibe-gray-100 font-semibold">
-                  <span className="text-ice-orange">Gesamt</span>
-                  <span className="text-ice-orange">{formatCurrency(iceLeasing.totalCostOfOwnership)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </details>
       </Card>
 
       {/* Chart */}
@@ -400,30 +405,6 @@ export const ResultPanel: React.FC = () => {
             <TreePine className="w-5 h-5 mx-auto text-green-500 mb-1" />
             <p className="text-sm font-bold text-vibe-gray-700">{co2SavingsEquivalent.trees}</p>
             <p className="text-[10px] text-vibe-gray-500">Bäume/Jahr</p>
-          </div>
-        </div>
-      </Card>
-
-      {/* All-Inclusive Hinweis */}
-      <Card variant="bordered" padding="sm" className="bg-abo-purple/5 border-abo-purple/20">
-        <div className="flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-abo-purple/10 shrink-0">
-            <Star className="w-4 h-4 text-abo-purple fill-current" />
-          </div>
-          <div>
-            <h4 className="text-sm font-semibold text-abo-purple mb-1">All-Inclusive mit VIBE</h4>
-            <p className="text-xs text-vibe-gray-600 leading-relaxed">
-              Deine monatliche Abo-Rate deckt alles ab – ohne versteckte Kosten.
-              Wir kümmern uns um alles, du fährst einfach los.
-            </p>
-            <div className="flex flex-wrap gap-1 mt-2">
-              {VIBE_ABO.includedShort.map((item, i) => (
-                <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/80 rounded text-[10px] text-vibe-gray-600">
-                  <Check className="w-2 h-2 text-abo-purple" />
-                  {item}
-                </span>
-              ))}
-            </div>
           </div>
         </div>
       </Card>
