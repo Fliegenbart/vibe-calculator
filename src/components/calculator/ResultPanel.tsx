@@ -13,12 +13,8 @@ import {
 import {
   Fuel,
   Leaf,
-  Plane,
-  TreePine,
   Repeat,
   Check,
-  Star,
-  AlertCircle,
   Shield,
   Wrench,
   Calendar,
@@ -133,12 +129,25 @@ export const ResultPanel: React.FC = () => {
 
   if (!result) {
     return (
-      <Card variant="bordered" padding="lg" className="h-full flex flex-col items-center justify-center text-center">
-        <AlertCircle className="w-12 h-12 text-vibe-gray-300 mb-4" />
-        <h3 className="text-lg font-semibold text-vibe-gray-500">Wähle Fahrzeuge aus</h3>
+      <Card variant="bordered" padding="lg" className="h-full flex flex-col items-center justify-center text-center bg-gradient-to-br from-vibe-gray-50 to-white">
+        <motion.div
+          animate={{ y: [0, -10, 0] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="text-6xl mb-4"
+        >
+          🚗
+        </motion.div>
+        <h3 className="text-lg font-bold text-vibe-gray-600">Noch kein Auto gewählt!</h3>
         <p className="text-sm text-vibe-gray-400 mt-2 max-w-xs">
-          Passe die Parameter links an, um den Kostenvergleich zu sehen
+          Pick links deine Rides und wir zeigen dir, wo das Geld bleibt 💸
         </p>
+        <motion.div
+          className="mt-4 text-2xl"
+          animate={{ x: [-20, 20, -20] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+        >
+          👈
+        </motion.div>
       </Card>
     );
   }
@@ -157,13 +166,18 @@ export const ResultPanel: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <Card variant="bordered" padding="md" className="overflow-hidden">
-          <div className="grid grid-cols-2 gap-4">
+        <Card variant="bordered" padding="md" className="overflow-hidden relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-abo-purple/5 via-transparent to-ice-orange/5 pointer-events-none" />
+          <div className="grid grid-cols-2 gap-4 relative">
             {/* VIBE Price */}
-            <div className="text-center p-4 bg-abo-purple/5 rounded-xl border-2 border-abo-purple/30">
+            <motion.div
+              className="text-center p-4 bg-gradient-to-br from-abo-purple/10 to-purple-500/5 rounded-2xl border-2 border-abo-purple/40 relative overflow-hidden"
+              whileHover={{ scale: 1.02 }}
+            >
+              <div className="absolute top-1 right-1 text-lg">✨</div>
               <div className="flex items-center justify-center gap-2 mb-2">
                 <Repeat className="w-4 h-4 text-abo-purple" />
-                <span className="text-xs font-semibold text-abo-purple">VIBE Autoabo</span>
+                <span className="text-xs font-bold text-abo-purple">E-Auto Abo 🔋</span>
               </div>
               <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
@@ -172,17 +186,21 @@ export const ResultPanel: React.FC = () => {
               >
                 <AnimatedNumber
                   value={vibeAbo.totalCostOfOwnership}
-                  className="text-2xl font-bold text-abo-purple"
+                  className="text-2xl font-black text-abo-purple"
                 />
               </motion.div>
-              <p className="text-[10px] text-vibe-gray-500 mt-1">Alles inklusive</p>
-            </div>
+              <p className="text-[10px] text-abo-purple/70 mt-1 font-medium">All-in, chill mal 😎</p>
+            </motion.div>
 
             {/* ICE Price - grows with USPs */}
-            <div className="text-center p-4 bg-ice-orange/5 rounded-xl border-2 border-ice-orange/30">
+            <motion.div
+              className="text-center p-4 bg-gradient-to-br from-ice-orange/10 to-red-500/5 rounded-2xl border-2 border-ice-orange/40 relative overflow-hidden"
+              whileHover={{ scale: 1.02 }}
+            >
+              <div className="absolute top-1 right-1 text-lg">💨</div>
               <div className="flex items-center justify-center gap-2 mb-2">
                 <Fuel className="w-4 h-4 text-ice-orange" />
-                <span className="text-xs font-semibold text-ice-orange">Verbrenner-Leasing</span>
+                <span className="text-xs font-bold text-ice-orange">Verbrenner 🦕</span>
               </div>
               <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
@@ -200,9 +218,9 @@ export const ResultPanel: React.FC = () => {
                     <motion.p
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
-                      className="text-sm text-ice-orange"
+                      className="text-sm text-ice-orange font-semibold"
                     >
-                      + {formatCurrency(accumulatedExtraCost)} Extra
+                      + {formatCurrency(accumulatedExtraCost)} 😬
                     </motion.p>
                   )}
                 </AnimatePresence>
@@ -211,23 +229,23 @@ export const ResultPanel: React.FC = () => {
                   <AnimatedNumber
                     value={displayIcePrice}
                     duration={800}
-                    className="text-2xl font-bold text-ice-orange"
+                    className="text-2xl font-black text-ice-orange"
                   />
                 </div>
               </motion.div>
               <motion.p
-                className="text-[10px] text-vibe-gray-500 mt-1"
+                className="text-[10px] text-ice-orange/70 mt-1 font-medium"
                 animate={{ opacity: visibleUsps > 0 ? 1 : 0.5 }}
               >
-                {visibleUsps > 0 ? 'Reale Gesamtkosten' : 'Nur Leasing-Rate'}
+                {visibleUsps > 0 ? 'Autsch, die Realität 💸' : 'Nur Leasing... wait for it'}
               </motion.p>
-            </div>
+            </motion.div>
           </div>
 
           {/* USP Animation */}
           <div className="mt-4 pt-4 border-t border-vibe-gray-100">
-            <p className="text-xs font-semibold text-vibe-gray-500 mb-3">
-              Bei VIBE inklusive – beim Leasing extra:
+            <p className="text-xs font-bold text-vibe-gray-600 mb-3">
+              🎁 Bei uns dabei – beim Dino extra bezahlen:
             </p>
             <div className="space-y-2">
               {uspItems.map((usp, index) => {
@@ -303,27 +321,37 @@ export const ResultPanel: React.FC = () => {
           <AnimatePresence>
             {visibleUsps === uspItems.length && (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3, type: 'spring' }}
-                className="mt-4 p-3 bg-gradient-to-r from-abo-purple/10 to-ev-green/10 rounded-xl border border-abo-purple/20"
+                initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
+                className="mt-4 p-4 bg-gradient-to-r from-abo-purple via-purple-600 to-pink-500 rounded-2xl shadow-lg shadow-abo-purple/30 relative overflow-hidden"
               >
-                <div className="flex items-center justify-between">
+                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvc3ZnPg==')] opacity-50" />
+                <div className="flex items-center justify-between relative">
                   <div className="flex items-center gap-2">
-                    <Star className="w-5 h-5 text-abo-purple fill-current" />
-                    <span className="text-sm font-semibold text-vibe-gray-700">
-                      Du sparst mit VIBE:
+                    <motion.span
+                      animate={{ rotate: [0, 15, -15, 0] }}
+                      transition={{ duration: 0.5, delay: 0.5 }}
+                      className="text-2xl"
+                    >
+                      🎉
+                    </motion.span>
+                    <span className="text-sm font-bold text-white">
+                      Boom! Du sparst:
                     </span>
                   </div>
                   <motion.span
-                    initial={{ scale: 1.5, opacity: 0 }}
+                    initial={{ scale: 2, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: 'spring', stiffness: 300 }}
-                    className="text-xl font-bold text-abo-purple"
+                    transition={{ type: 'spring', stiffness: 300, delay: 0.4 }}
+                    className="text-2xl font-black text-white drop-shadow-lg"
                   >
                     {formatCurrency(Math.abs(savingsTotal))}
                   </motion.span>
                 </div>
+                <p className="text-[10px] text-white/70 mt-2 text-center">
+                  Das sind {Math.round(Math.abs(savingsTotal) / userProfile.holdingPeriodYears / 12)} € pro Monat mehr für die schönen Dinge 🍕🎮✈️
+                </p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -335,19 +363,20 @@ export const ResultPanel: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6, type: 'spring' }}
-                className="mt-3 p-3 bg-green-50 border border-green-200 rounded-xl"
+                className="mt-3 p-3 bg-gradient-to-r from-emerald-50 to-green-50 border border-green-300 rounded-xl relative overflow-hidden"
               >
-                <div className="flex items-center justify-between">
+                <div className="absolute -right-2 -top-2 text-3xl opacity-20">🌱</div>
+                <div className="flex items-center justify-between relative">
                   <div className="flex items-center gap-2">
                     <Leaf className="w-4 h-4 text-green-600" />
-                    <span className="text-sm text-green-700">THG-Quote Bonus (E-Auto)</span>
+                    <span className="text-sm font-semibold text-green-700">Gratis Geld vom Staat 🤑</span>
                   </div>
-                  <span className="text-lg font-bold text-green-600">
+                  <span className="text-lg font-black text-green-600">
                     +{formatCurrency(300 * userProfile.holdingPeriodYears)}
                   </span>
                 </div>
-                <p className="text-[10px] text-green-600 mt-1">
-                  Jährliche Einnahme durch CO₂-Zertifikate
+                <p className="text-[10px] text-green-600/80 mt-1">
+                  THG-Quote: Weil du CO₂ sparst, kriegst du Cash 💚
                 </p>
               </motion.div>
             )}
@@ -382,8 +411,9 @@ export const ResultPanel: React.FC = () => {
       </Card>
 
       {/* Chart */}
-      <Card variant="bordered" padding="sm">
-        <h4 className="text-sm font-medium text-vibe-gray-600 mb-3">Kostenentwicklung</h4>
+      <Card variant="bordered" padding="sm" className="relative overflow-hidden">
+        <div className="absolute -top-10 -right-10 w-24 h-24 bg-gradient-to-br from-abo-purple/10 to-transparent rounded-full blur-2xl" />
+        <h4 className="text-sm font-bold text-vibe-gray-700 mb-3">📈 So läuft's über Zeit</h4>
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
@@ -438,26 +468,42 @@ export const ResultPanel: React.FC = () => {
       </Card>
 
       {/* CO2 Compact */}
-      <Card variant="bordered" padding="sm" className="bg-gradient-to-br from-green-50 to-white">
+      <Card variant="bordered" padding="sm" className="bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 relative overflow-hidden">
+        <div className="absolute -right-4 -bottom-4 text-6xl opacity-10">🌍</div>
         <div className="flex items-center gap-2 mb-3">
-          <Leaf className="w-4 h-4 text-green-600" />
-          <span className="text-sm font-medium text-vibe-gray-600">CO₂-Ersparnis mit E-Auto</span>
+          <motion.span
+            animate={{ rotate: [0, 10, -10, 0] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="text-xl"
+          >
+            🌱
+          </motion.span>
+          <span className="text-sm font-bold text-green-700">Planet sagt Danke!</span>
         </div>
-        <p className="text-2xl font-bold text-green-600 mb-3">
-          {formatCO2(co2Savings)}
+        <p className="text-2xl font-black text-green-600 mb-3">
+          {formatCO2(co2Savings)} weniger CO₂
         </p>
         <div className="grid grid-cols-2 gap-2 text-center">
-          <div className="p-2 bg-white/70 rounded-lg">
-            <Plane className="w-5 h-5 mx-auto text-blue-500 mb-1" />
-            <p className="text-sm font-bold text-vibe-gray-700">{co2SavingsEquivalent.flights}</p>
-            <p className="text-[10px] text-vibe-gray-500">Mallorca-Flüge</p>
-          </div>
-          <div className="p-2 bg-white/70 rounded-lg">
-            <TreePine className="w-5 h-5 mx-auto text-green-500 mb-1" />
-            <p className="text-sm font-bold text-vibe-gray-700">{co2SavingsEquivalent.trees}</p>
-            <p className="text-[10px] text-vibe-gray-500">Bäume/Jahr</p>
-          </div>
+          <motion.div
+            className="p-3 bg-white/80 rounded-xl border border-green-200 cursor-pointer"
+            whileHover={{ scale: 1.05, rotate: -2 }}
+          >
+            <span className="text-2xl block mb-1">✈️</span>
+            <p className="text-lg font-black text-vibe-gray-700">{co2SavingsEquivalent.flights}x</p>
+            <p className="text-[10px] text-vibe-gray-500 font-medium">Malle-Trips gespart</p>
+          </motion.div>
+          <motion.div
+            className="p-3 bg-white/80 rounded-xl border border-green-200 cursor-pointer"
+            whileHover={{ scale: 1.05, rotate: 2 }}
+          >
+            <span className="text-2xl block mb-1">🌳</span>
+            <p className="text-lg font-black text-vibe-gray-700">{co2SavingsEquivalent.trees}</p>
+            <p className="text-[10px] text-vibe-gray-500 font-medium">Bäume pro Jahr</p>
+          </motion.div>
         </div>
+        <p className="text-[10px] text-center text-green-600/70 mt-3">
+          Flexen mit gutem Gewissen 💚
+        </p>
       </Card>
     </div>
   );

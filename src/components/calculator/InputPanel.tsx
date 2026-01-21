@@ -66,8 +66,9 @@ export const InputPanel: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Fahrzeugauswahl */}
-      <Card variant="bordered" padding="md">
-        <Section title="Fahrzeuge vergleichen">
+      <Card variant="bordered" padding="md" className="relative overflow-hidden">
+        <div className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-abo-purple/10 to-transparent rounded-full blur-2xl" />
+        <Section title="🚗 Pimp deinen Vergleich">
           <div className="grid grid-cols-1 gap-4">
             <div className="flex items-start gap-3">
               <div className="p-2 bg-abo-light rounded-lg">
@@ -105,10 +106,11 @@ export const InputPanel: React.FC = () => {
         </Section>
 
         {/* VIBE All-Inclusive Info */}
-        <div className="mt-4 p-3 bg-abo-purple/5 border border-abo-purple/20 rounded-xl">
+        <div className="mt-4 p-3 bg-gradient-to-r from-abo-purple/10 via-purple-500/5 to-pink-500/10 border border-abo-purple/20 rounded-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 text-4xl opacity-10 -rotate-12 translate-x-2 -translate-y-1">🎁</div>
           <div className="flex items-center gap-2 mb-3">
             <Star className="w-4 h-4 text-abo-purple fill-current" />
-            <span className="text-xs font-semibold text-abo-purple">VIBE All-Inclusive</span>
+            <span className="text-xs font-bold text-abo-purple">Alles dabei, Zero Stress 💅</span>
           </div>
           <div className="grid grid-cols-2 gap-x-2 gap-y-1">
             <span className="text-[10px] text-vibe-gray-600 flex items-center gap-1">
@@ -131,9 +133,9 @@ export const InputPanel: React.FC = () => {
             </span>
           </div>
           <div className="mt-3 pt-2 border-t border-abo-purple/10">
-            <div className="flex items-start gap-1.5 text-[10px] text-ice-orange">
+            <div className="flex items-start gap-1.5 text-[10px] text-ice-orange font-medium">
               <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
-              <span>Beim Verbrenner-Leasing: Versicherung, Steuer, Wartung, Reifen extra!</span>
+              <span>Beim Verbrenner? Alles extra. RIP Geldbeutel 💸</span>
             </div>
           </div>
         </div>
@@ -141,7 +143,7 @@ export const InputPanel: React.FC = () => {
 
       {/* Nutzungsprofil */}
       <Card variant="bordered" padding="md">
-        <Section title="Nutzungsprofil">
+        <Section title="🛣️ Wie rollst du?">
           <Slider
             label="Jahreskilometer"
             value={userProfile.annualMileage}
@@ -165,7 +167,7 @@ export const InputPanel: React.FC = () => {
 
       {/* Ladeszenarien */}
       <Card variant="bordered" padding="md">
-        <Section title="Ladeszenario">
+        <Section title="⚡ Wo tankst du Strom?">
           <div className="grid grid-cols-2 gap-2">
             {chargingPresets.map((preset) => (
               <motion.button
@@ -229,7 +231,7 @@ export const InputPanel: React.FC = () => {
 
       {/* Energiepreise */}
       <Card variant="bordered" padding="md">
-        <Section title="Energiepreise">
+        <Section title="💰 Money Talk">
           <Slider
             label="Strompreis (Zuhause)"
             value={userProfile.electricityPrice}
@@ -253,7 +255,7 @@ export const InputPanel: React.FC = () => {
 
       {/* Extras */}
       <Card variant="bordered" padding="md">
-        <Section title="Extras">
+        <Section title="✨ Power-Ups">
           <div className="space-y-4">
             <Toggle
               label="Wallbox vorhanden"
