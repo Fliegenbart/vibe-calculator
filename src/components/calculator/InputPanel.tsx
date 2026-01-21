@@ -259,9 +259,16 @@ export const InputPanel: React.FC = () => {
               label="Wallbox vorhanden"
               description="Private Ladestation zu Hause"
               checked={userProfile.hasWallbox}
-              onChange={setHasWallbox}
+              onChange={(value) => {
+                setHasWallbox(value);
+                if (value) {
+                  setWallboxCost(0); // Wallbox schon da = keine Kosten
+                } else {
+                  setWallboxCost(1500); // Neuanschaffung = Standardkosten
+                }
+              }}
             />
-            {userProfile.hasWallbox && (
+            {!userProfile.hasWallbox && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
